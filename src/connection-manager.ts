@@ -97,6 +97,14 @@ export class ConnectionManager extends EventEmitter {
   }
 
   /**
+   * Update the target address for client connections.
+   * Called when the user changes the target address in settings.
+   */
+  setTargetAddress(address: string): void {
+    this.targetAddress = address;
+  }
+
+  /**
    * Get the currently active WebSocket instance.
    */
   getActiveSocket(): WebSocket | null {

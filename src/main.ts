@@ -397,6 +397,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   connectToDevice(ip: string, port: number): void {
     this.settings.targetAddress = ip;
     this.settings.port = port;
+    this.connMgr.setTargetAddress(ip);
     this.saveSettings().catch(() => {});
     this.startSync().catch(() => {});
   }
