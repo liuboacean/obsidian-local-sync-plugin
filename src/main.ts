@@ -87,6 +87,12 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       this.startDiscovery();
     }
 
+    // Auto-start the WebSocket server on plugin load
+    // This allows other devices to connect to this instance
+    this.connMgr.startServer().catch((err) => {
+      syncLogger.log(LogLevel.ERROR, `Auto-start server failed: ${err}`, undefined, SyncEventType.ERROR);
+    });
+
     // Register settings tab
     this.addSettingTab(new LocalSyncSettingTab(this.app, this));
 
