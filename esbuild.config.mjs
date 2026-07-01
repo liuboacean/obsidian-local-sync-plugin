@@ -12,8 +12,6 @@ const prod = process.argv[2] === "production";
 const external = [
   "obsidian",
   "electron",
-  "ws",
-  "yjs",
   ...builtins,
 ];
 
@@ -32,6 +30,9 @@ const context = await esbuild.context({
   outfile: "main.js",
   platform: "node",
   metafile: prod,
+  supported: {
+    "node-colon-prefix-require": false,
+  },
 });
 
 if (prod) {
