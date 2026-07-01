@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-local-sync",
+  "name": "Obsidian Local Sync",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "LAN bidirectional sync plugin for Obsidian vaults",
+  "author": "Obsidian Local Sync Team",
+  "authorUrl": "",
+  "isDesktopOnly": true
+}
