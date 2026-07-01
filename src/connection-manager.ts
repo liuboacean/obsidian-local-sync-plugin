@@ -184,8 +184,9 @@ export class ConnectionManager extends EventEmitter {
 
   /**
    * Start a WebSocket server on the configured port.
+   * Public so main.ts can auto-start it in onload().
    */
-  private async startServer(): Promise<void> {
+  async startServer(): Promise<void> {
     try {
       this.server = new WebSocket.Server({
         port: this.port,
