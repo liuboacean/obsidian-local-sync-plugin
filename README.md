@@ -2,30 +2,72 @@
 
 # 🔄 Local Sync
 
-**Zero-cloud, zero-conflict, zero-config — LAN bidirectional sync for Obsidian vaults**
+**Zero-cloud · Zero-conflict · Zero‑config — LAN bidirectional sync for Obsidian vaults**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Obsidian](https://img.shields.io/badge/Obsidian-Plugin-7C3AED?logo=obsidian)](https://obsidian.md)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
+  <a href="https://obsidian.md"><img src="https://img.shields.io/badge/Obsidian-Plugin-7C3AED?logo=obsidian" alt="Obsidian Plugin"></a>
+  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/tests-148%2F148-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/dependencies-3-brightgreen" alt="Dependencies">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome">
+</p>
 
 ---
 
-https://github.com/user-attachments/assets/00000000-0000-0000-0000-000000000000
+<p align="center">
+  <b>🌐 LAN | 🔒 WSS/TLS | 🤝 CRDT | 📡 UDP | 🔐 PSK</b>
+</p>
+
+---
 
 </div>
 
----
-
 ## ✨ Features
 
-- **🔗 LAN Direct Sync** — Peer-to-peer WebSocket connection, zero cloud dependency
-- **🤝 Zero-Conflict** — Yjs CRDT automatically merges text edits, no manual conflict resolution
-- **🔐 Security First** — PSK challenge-response authentication + path traversal protection
-- **📡 Auto Discovery** — UDP broadcast finds devices on the same LAN
-- **📱 Mobile Ready** — Desktop as server, mobile as client (via QR code pairing)
-- **🎯 Selective Sync** — Exclude folders / file types as needed
-- **🖥️ Cross-Platform** — macOS, Linux, Windows — fully compatible
-- **🔌 Zero Config** — Install, set IP (or auto-discover), and go
+<table>
+<tr>
+<td width="50%">
+
+**🔗 LAN Direct Sync**
+Peer‑to‑peer WebSocket/WSS connection.
+Zero cloud dependency — your data stays on your network.
+
+**🤝 Zero‑Conflict CRDT**
+Yjs CRDT automatically merges concurrent text edits.
+No manual conflict resolution. Ever.
+
+**🔒 TLS Encrypted**
+WSS transport with auto‑generated ECDSA P‑256 certificates.
+Certificate PIN verification prevents MITM attacks.
+
+**📡 Auto Discovery**
+UDP broadcast finds devices on the same LAN.
+No IP typing needed.
+
+</td>
+<td width="50%">
+
+**🔐 Security First**
+PSK challenge‑response authentication.
+Path traversal protection against rogue file writes.
+
+**🎯 Selective Sync**
+Exclude folders & file types.
+Ignore `.trash`, `.tmp`, `node_modules` — your choice.
+
+**🖥️ Cross‑Platform**
+macOS (NSFileCoordinator aware)
+Linux (writeFile + chmod)  
+Windows (write + lock‑retry)
+
+**🔌 Zero Config**
+Install, set IP (or auto‑discover), and go.
+Certificates auto‑generate on first launch.
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -33,53 +75,85 @@ https://github.com/user-attachments/assets/00000000-0000-0000-0000-000000000000
 
 ### Installation
 
-1. **Download** from [Releases](https://github.com/liuboacean/obsidian-local-sync-plugin/releases)
-2. Copy `main.js`, `manifest.json`, `styles.css` to `your-vault/.obsidian/plugins/obsidian-local-sync/`
-3. Open Obsidian → **Settings** → **Community plugins** → Enable **Obsidian Local Sync**
+> 📁 Plugin ID: `local-sync` · Folder: `your-vault/.obsidian/plugins/local-sync/`
+
+1. **Download** the latest release from the [Releases page](https://github.com/liuboacean/obsidian-local-sync-plugin/releases)
+2. Copy `main.js` + `manifest.json` + `styles.css` to `your-vault/.obsidian/plugins/local-sync/`
+3. Open Obsidian → ⚙️ **Settings** → **Community plugins** → **Enable** `Local Sync`
 
 ### Usage
 
-1. Open **Settings** → **Obsidian Local Sync**
-2. Set **Target Address** to the other device's IP
-3. Click **Connect**
-4. ✅ Status bar turns green — files are syncing!
+<table>
+<tr>
+<th>Step</th>
+<th>Action</th>
+</tr>
+<tr>
+<td>1️⃣</td>
+<td>Open ⚙️ **Settings** → **Local Sync**</td>
+</tr>
+<tr>
+<td>2️⃣</td>
+<td>Enter the **other device's IP** in "Target Address"</td>
+</tr>
+<tr>
+<td>3️⃣</td>
+<td>Click **Connect**</td>
+</tr>
+<tr>
+<td>4️⃣</td>
+<td>🟢 Status bar turns green — files are syncing!</td>
+</tr>
+</table>
 
-> **Pro tip:** On the same subnet? Enable UDP discovery for zero-config auto-connect.
+> **💡 Pro tip:** On the same subnet? Enable **UDP discovery** for zero‑config auto‑connect.  
+> **🔒 TLS** is on by default with auto‑generated ECDSA P‑256 certificates.
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌──────────────────────────────────────────────┐
-│  UI Layer (SettingTab / ConflictModal / StatusBar)
-├──────────────────────────────────────────────┤
-│  Service Layer (SyncEngine + CRDT + ConflictDetector)
-├──────────────────────────────────────────────┤
-│  Discovery Layer ── UDP broadcast + QR pairing
-├──────────────────────────────────────────────┤
-│  Security Layer ── PSK auth + path validation
-├──────────────────────────────────────────────┤
-│  Network & IO ── WebSocket + chokidar + OsWriter
-└──────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│              UI Layer                            │
+│  SettingTab / ConflictModal / StatusBar          │
+│  └─ TLS settings, fingerprint display, reset     │
+├──────────────────────────────────────────────────┤
+│           Service Layer                          │
+│  SyncEngine + CrdtEngine(Yjs) + ConflictDetector │
+├──────────────────────────────────────────────────┤
+│         Discovery Layer                          │
+│  UDP broadcast + QR pairing (desktop↔mobile)     │
+├──────────────────────────────────────────────────┤
+│          Security Layer                          │
+│  TLS encryption + PSK auth + path validation     │
+│  └─ CertManager (ECDSA P‑256, auto‑generate)     │
+├──────────────────────────────────────────────────┤
+│       Network & IO Layer                         │
+│  WebSocket(WSS/WS) + chokidar + OsWriter         │
+│  └─ http/https dual‑protocol server              │
+└──────────────────────────────────────────────────┘
 ```
+
+### Module Overview
 
 | Layer | Module | Responsibility |
 |-------|--------|---------------|
-| **UI** | `setting-tab.ts` | 6-section settings panel |
-| **UI** | `sync-status-bar.ts` | Status bar with connection/sync indicators |
-| **UI** | `conflict-resolver.ts` | Binary file conflict resolution dialog |
-| **Service** | `sync-engine.ts` ⭐ | Sync orchestration & file state tracking |
-| **Service** | `crdt-engine.ts` ⭐ | Yjs CRDT auto-merge for text files |
-| **Service** | `conflict-detector.ts` | Binary-only conflict detection |
-| **Service** | `initial-sync.ts` | Two-phase initial sync (manifest → transfer) |
-| **Discovery** | `discovery-manager.ts` | UDP broadcast device discovery |
-| **Security** | `auth-handshake.ts` | PSK challenge-response auth |
-| **Security** | `path-validator.ts` | Path traversal protection |
-| **Network** | `connection-manager.ts` | WebSocket server/client/duplex |
-| **Network** | `protocol.ts` | Message serialization protocol |
-| **IO** | `file-watcher.ts` | Chokidar-based file change detection |
-| **IO** | `os-writer.ts` | Platform-aware file writing |
+| 🔒 **Security** | `cert-manager.ts` | ECDSA P‑256 certificate lifecycle (generate/load/reset) |
+| 🔒 **Security** | `auth-handshake.ts` | PSK challenge‑response authentication |
+| 🔒 **Security** | `path-validator.ts` | Path traversal protection |
+| 🌐 **Network** | `connection-manager.ts` | WebSocket/WSS server/client/duplex + TLS fallback |
+| 🌐 **Network** | `protocol.ts` | Message serialization protocol |
+| 🔄 **Sync** | `sync-engine.ts` ⭐ | Sync orchestration & file state tracking |
+| 🔄 **Sync** | `crdt-engine.ts` ⭐ | Yjs CRDT auto‑merge for text files |
+| 🔄 **Sync** | `conflict-detector.ts` | Binary‑only conflict detection |
+| 🔄 **Sync** | `initial-sync.ts` | Two‑phase initial sync (manifest → transfer) |
+| 📡 **Discovery** | `discovery-manager.ts` | UDP broadcast device discovery |
+| 📂 **IO** | `file-watcher.ts` | Chokidar‑based file change detection |
+| 📂 **IO** | `os-writer.ts` | Platform‑aware file writing (macOS/Linux/Win) |
+| 🖥️ **UI** | `setting-tab.ts` | Settings panel with 6 configuration sections |
+| 🖥️ **UI** | `sync-status-bar.ts` | Status bar indicators |
+| 🖥️ **UI** | `conflict-resolver.ts` | Binary file conflict resolution dialog |
 
 ---
 
@@ -88,51 +162,97 @@ https://github.com/user-attachments/assets/00000000-0000-0000-0000-000000000000
 ### Sync Flow
 
 ```
-Device A ──→ Send File Manifest (FILE_LIST_BATCH) ──→ Device B
-                │                                            │
-                │     B compares against local files          │
-                │                                            │
-                │←── Reply with missing/different (FILE_LIST_ACK) ──┤
-                │                                            │
-                │── Transfer files (FILE_RESPONSE) ──────────┤
-                                                                 
-                                                                 
-Device A ──→ File change detected ──→ CRDT incremental update ──→ Device B
-                │                                                       │
-                │     [Text files] Yjs merge & write                     │
-                │     [Binary files] Full file transfer                  │
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Initial Sync                                │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Device A ── FILE_LIST_BATCH (manifest, 100 files/batch) ──→ Device B │
+│                ←── FILE_LIST_ACK (missing + different) ──────────┤  │
+│                ── FILE_RESPONSE (missing files, 10 concurrent) ──→   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                     Incremental Sync                               │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  File change detected                                                │
+│      ├── TEXT (.md/.txt/.canvas) → CRDT incremental update          │
+│      └── BINARY (.png/.pdf/.zip) → Full file transfer               │
+│                                                                     │
+│  Both paths: protected by recentlyPushed(2s) + originDeviceId       │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### TLS Handshake
+
+```
+Client (WSS)                  Server (WSS)
+     │                            │
+     │──── wss://connect ──────→│  TLS 1.2/1.3 handshake
+     │←── TLS established ─────│  Transport encrypted
+     │                            │
+     │── cert-fingerprint ────→│  Exchange SHA‑256 fingerprints
+     │←── cert-fingerprint-ack─│  PIN verification
+     │                            │
+     │── PSK challenge ───────→│  Inside encrypted channel
+     │←── authenticated ──────│
+     │                            │
+     │── sync data (encrypted) →│  All traffic protected
 ```
 
 ### Conflict Resolution
 
 | File Type | Strategy |
 |-----------|----------|
-| **.md / .txt / .canvas** | Yjs CRDT auto-merge — no user intervention needed |
-| **.png / .pdf / .zip** | Detected → User prompted to keep local / remote / both |
+| 📝 **.md / .txt / .canvas** | Yjs CRDT auto‑merge — no user intervention needed |
+| 🖼️ **.png / .pdf / .zip** | Detected → User prompted to keep local / remote / both |
 
 ### Synchronization Safeguards
 
 | Mechanism | Purpose |
 |-----------|---------|
-| `recentlyPushed` (2s TTL) | Prevents sync loop (A pushes → B writes → B pushes back) |
+| `recentlyPushed` (2s TTL) | Prevents sync loop |
 | `originDeviceId` | Ignores changes originated from self |
 | Debounce (500ms) | Avoids redundant sync on rapid saves |
 | UUID dedup | Prevents duplicate message processing |
-| Heartbeat (30s ping/pong) | Detects dead connections |
-| Exponential backoff | Smart reconnection (1s → 2s → 4s → 8s → ... → 60s max) |
+| Heartbeat (120s ping/pong) | Detects dead connections |
+| Exponential backoff (1s→60s) | Smart reconnection |
 | Version tracking | Discards stale file versions |
 | Pending queue | Buffers changes when offline, flushes on reconnect |
 
 ---
 
-## 📊 Stats
+## 🔒 TLS Encryption (v1.1.0)
+
+| Feature | Description |
+|---------|-------------|
+| **Protocol** | WSS (WebSocket Secure) — TLS 1.2/1.3 |
+| **Certificate** | ECDSA P‑256 self‑signed, auto‑generated on first launch |
+| **Storage** | `~/.obsidian-sync/certs/cert.pem` + `key.pem` |
+| **Validation** | SHA‑256 fingerprint exchange + PIN code verification |
+| **Fallback** | Automatic downgrade to plain WS (configurable) |
+| **Dependencies** | **Zero** — all Node.js built‑ins (`crypto`, `tls`, `http`, `https`) |
+
+> No CA needed. No OpenSSL setup. No external dependencies.
+> Just works — with or without TLS.
+
+---
+
+## 📊 Project Stats
 
 | Metric | Value |
 |--------|-------|
-| Source Files | 19 `.ts` files, ~6,700 lines |
-| Tests | 131 tests (unit + integration + E2E), all passing |
-| Dependencies | `ws` · `chokidar` · `yjs` |
-| Build | esbuild — single `main.js` (~190KB) |
+| 📁 Source Files | **20** `.ts` files, ~7,800 lines |
+| 🧪 Tests | **148** passing (unit + integration + E2E) |
+| ⏱️ Test Duration | ~1 second |
+| 📦 Build Output | Single `main.js` (~552KB) |
+| 🔗 External Deps | `ws` · `chokidar` · `yjs` (all bundled) |
+| 🖥️ Platforms | macOS ✅ · Linux ✅ · Windows ✅ |
+| 🔒 TLS Deps | **Zero** (all Node.js built‑in) |
+| 🏷️ Latest | **v1.1.0** — TLS encryption |
 
 ---
 
@@ -143,26 +263,36 @@ Device A ──→ File change detected ──→ CRDT incremental update ──
 git clone https://github.com/liuboacean/obsidian-local-sync-plugin.git
 cd obsidian-local-sync-plugin
 npm install
-npm run build     # Production build
+npm run build     # Production build (main.js)
 npm run dev       # Watch mode (for Hot Reload plugin)
-npm test          # Run all tests
+npm test          # Run all 148 tests
 
-# Quick test with two vaults on the same machine:
-# 1. Copy to Vault A: cp main.js manifest.json styles.css /path/to/vault-a/.obsidian/plugins/obsidian-local-sync/
-# 2. Copy to Vault B (different port via settings)
-# 3. Restart Obsidian on both vaults
-# 4. Point Vault A → Vault B's address
+# Quick local test with two vaults:
+cp main.js manifest.json styles.css /path/to/vault-a/.obsidian/plugins/local-sync/
+cp main.js manifest.json styles.css /path/to/vault-b/.obsidian/plugins/local-sync/
+# Open both vaults in Obsidian, enable plugin, connect
 ```
 
 ---
 
-## 📝 To-Do
+## 📋 Changelog
 
-- [x] Yjs CRDT auto-merge
+| Version | Date | Highlights |
+|:-------:|:----:|-----------|
+| **1.1.0** | Jul 2, 2026 | ✅ TLS encryption (WSS), ECDSA P‑256 certs, 148 tests |
+| 1.0.9 | Jul 2, 2026 | Obsidian community review fixes |
+| 1.0.8 | Jul 2, 2026 | Release format fix |
+| 1.0.7 | Jul 2, 2026 | Initial release, 131 tests |
+
+---
+
+## 🗺️ Roadmap
+
+- [x] Yjs CRDT auto‑merge
 - [x] PSK auth + path security
-- [x] UDP auto-discovery
-- [x] Cross-platform file writer (macOS/Linux/Windows)
-- [ ] TLS encryption (P2)
+- [x] UDP auto‑discovery
+- [x] Cross‑platform file writer
+- [x] **TLS encryption (WSS)** ← v1.1.0
 - [ ] Mobile client support (P2)
 - [ ] Sync history viewer (P2)
 - [ ] Diff preview before sync (P2)
