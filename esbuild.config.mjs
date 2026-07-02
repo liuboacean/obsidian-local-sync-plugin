@@ -12,6 +12,7 @@ const prod = process.argv[2] === "production";
 const external = [
   "obsidian",
   "electron",
+  "ws",
   ...builtins,
 ];
 
