@@ -50,6 +50,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   discoveryMgr!: DiscoveryManager;
   initialSync!: InitialSyncManager;
   statusBar!: SyncStatusBar;
+  settingTab: LocalSyncSettingTab | null = null;
   osWriter!: OsWriter;
 
   /** Generated unique device ID (persistent per vault). */
@@ -131,7 +132,8 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     }
 
     // Register settings tab
-    this.addSettingTab(new LocalSyncSettingTab(this.app, this));
+    this.settingTab = new LocalSyncSettingTab(this.app, this);
+    this.addSettingTab(this.settingTab);
 
     // Register status bar
     this.statusBar.registerStatusBar();
@@ -290,6 +292,8 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
           undefined,
           SyncEventType.SYNC_COMPLETED,
         );
+        // Refresh the settings page to show updated stats
+        this.settingTab?.display();
       },
     });
 
