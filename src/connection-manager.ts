@@ -213,18 +213,12 @@ export class ConnectionManager extends EventEmitter {
           undefined,
           SyncEventType.CONNECTED,
         );
-
-        // In DUPLEX mode, if we already have an active connection, reject the new one
-        if (this.isConnected && this.mode === SyncMode.DUPLEX) {
-          socket.close(4000, "Already connected via other side");
-          return;
-        }
-
         this.serverSocket = socket;
         this.activeSocket = socket;
         this.setupSocketHandlers(socket);
         this.startHeartbeat();
-        this.initAuthHandshake(socket);
+        this.isConnected = true;
+        this.emit(EVENTS.CONNECTED);
       });
 
       this.server.on("error", (err: Error) => {
@@ -319,10 +313,12 @@ export class ConnectionManager extends EventEmitter {
         this.activeSocket = socket;
         this.setupSocketHandlers(socket);
         this.startHeartbeat();
-        // Do NOT call initAuthHandshake here — the server will initiate auth.
-        // Client should only RESPOND to the server's challenge.
-        // Letting both sides send challenges causes authSession corruption.
-        debugLog("[ObsSync] Client socket open, waiting for server auth challenge");
+        // Don't init auth here — the server sends the challenge.
+        // Emit connected immediately so both sides show status.
+        // Auth validation happens server-side; failures close the socket.
+        this.isConnected = true;
+        this.emit(EVENTS.CONNECTED);
+        debugLog("[ObsSync] Client socket open, connected (awaiting server auth)");
       });
 
       socket.on("error", (err: Error) => {
@@ -332,6 +328,10 @@ export class ConnectionManager extends EventEmitter {
           undefined,
           SyncEventType.ERROR,
         );
+        // On ECONNREFUSED (liubo-pc not ready yet), retry with reconnect
+        if (this.shouldReconnect) {
+          this.scheduleReconnect();
+        }
       });
 
       socket.on("close", () => {
@@ -392,15 +392,16 @@ export class ConnectionManager extends EventEmitter {
    * Handle an incoming WebSocket message.
    */
   private handleIncomingMessage(socket: WebSocket, data: WebSocket.Data): void {
-    // Binary data — forward as CRDT update event
+    // Binary data — forward as CRDT update event only
+    // Do NOT emit MESSAGE_RECEIVED — binary is not a SyncMessage
     if (data instanceof Buffer || data instanceof ArrayBuffer) {
-      this.emit(EVENTS.MESSAGE_RECEIVED, data);
       this.emit(EVENTS.CRDT_UPDATE_RECEIVED, data);
       return;
     }
 
     // Text data — parse as JSON message
     const messageStr = typeof data === "string" ? data : data.toString();
+    debugLog("[ObsSync] Incoming text (first 100): " + messageStr.substring(0, 100));
     const message = deserializeMessage(messageStr);
 
     if (!message) {
@@ -426,6 +427,12 @@ export class ConnectionManager extends EventEmitter {
 
     // Handle authentication messages
     if (this.handleAuthMessage(socket, message)) {
+      return;
+    }
+
+    // Skip messages with undefined type (likely control frames or bad parse)
+    if (!message.type) {
+      debugLog("[ObsSync] Skipping message with undefined type");
       return;
     }
 
@@ -468,11 +475,11 @@ export class ConnectionManager extends EventEmitter {
   private initAuthHandshake(socket: WebSocket): void {
     const psk = this.sharedKey || "default-key";
     this.authSession = createAuthSession(psk);
-    this.authSession.start();
+    const challenge = this.authSession.start();
 
     const challengeMsg = createMessage(
       MessageType.HANDSHAKE,
-      { challenge: this.authSession.start() },
+      { challenge },
       this.deviceId,
       this.deviceName,
     );
@@ -487,6 +494,7 @@ export class ConnectionManager extends EventEmitter {
   private handleAuthMessage(socket: WebSocket, message: SyncMessage): boolean {
     // HANDSHAKE (challenge) does not require authSession — client side
     // responds to server's challenge using sharedKey directly.
+    debugLog("[ObsSync] handleAuthMessage called, msg.type=" + message.type + ", hasAuthSession=" + (this.authSession !== null));
     if (message.type === MessageType.HANDSHAKE) {
       const challenge = message.payload?.challenge;
       if (!challenge || typeof challenge !== "string") {

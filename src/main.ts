@@ -16,6 +16,7 @@ import {
   ConflictInfo,
   LogLevel,
   SyncEventType,
+  MessageType,
 } from "./types";
 import { DEFAULT_SETTINGS } from "./settings";
 import { LocalSyncSettingTab } from "./setting-tab";
@@ -119,6 +120,15 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
         console.error("[Obsidian Local Sync] Server start FAILED:", err);
         syncLogger.log(LogLevel.ERROR, `Auto-start server failed: ${err}`, undefined, SyncEventType.ERROR);
       });
+
+    // Auto-connect to remote device if target address is configured
+    // Saves the user from having to click "连接" after each restart
+    if (this.settings.targetAddress && (this.settings.mode === SyncMode.CLIENT || this.settings.mode === SyncMode.DUPLEX)) {
+      debugLog("[Obsidian Local Sync] Auto-connecting to", this.settings.targetAddress);
+      this.startSync().catch((err) => {
+        console.error("[Obsidian Local Sync] Auto-connect failed:", err);
+      });
+    }
 
     // Register settings tab
     this.addSettingTab(new LocalSyncSettingTab(this.app, this));
@@ -299,6 +309,10 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     // Connection Manager -> Status bar + Sync engine
     this.connMgr.on("connected", () => {
       this.statusBar.updateConnectionStatus("connected");
+      // Update device count to 1 (the remote peer we connected to)
+      // UDP discovery may not work across subnets, so this ensures
+      // the status bar shows connected device count even without UDP
+      this.statusBar.setDeviceCount(1);
       syncLogger.log(LogLevel.SUCCESS, "Connected to remote device", undefined, SyncEventType.CONNECTED);
 
       // Start sync engine
@@ -327,6 +341,20 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     });
 
     this.connMgr.on("message-received", (msg: SyncMessage) => {
+      // Route initial sync messages to InitialSyncManager
+      if (msg.type === MessageType.FILE_LIST_BATCH) {
+        this.initialSync.handleRemoteBatch(msg).catch((err) => {
+          syncLogger.log(LogLevel.ERROR, `initialSync batch error: ${err}`, undefined, SyncEventType.ERROR);
+        });
+        return;
+      }
+      if (msg.type === MessageType.FILE_LIST_ACK) {
+        this.initialSync.handleFileListAck(msg).catch((err) => {
+          syncLogger.log(LogLevel.ERROR, `initialSync ack error: ${err}`, undefined, SyncEventType.ERROR);
+        });
+        return;
+      }
+      // All other messages go to the sync engine
       this.engine.handleRemoteMessage(msg).catch((err) => {
         syncLogger.log(LogLevel.ERROR, `message-received handler: ${err}`, undefined, SyncEventType.ERROR);
       });
