@@ -326,7 +326,11 @@ export class ConnectionManager extends EventEmitter {
     );
 
     try {
-      const socket = new WebSocket(url);
+      // ws constructor: new WebSocket(url, protocols?, options?)
+      // For WSS with self-signed certs, pass rejectUnauthorized in options
+      const socket = new WebSocket(url, [], {
+        rejectUnauthorized: false,
+      } as any);
 
       socket.on("open", () => {
         debugLog("[ObsSync] Client WebSocket OPEN to", this.targetAddress);
@@ -365,8 +369,14 @@ export class ConnectionManager extends EventEmitter {
         );
 
         // TLS/WSS connection failed — try fallback to plain WS
-        if (this.enableTls && this.allowTlsFallback) {
-          debugLog("[ObsSync] TLS connection failed, falling back to WS:", err.message);
+        // Only fall back on genuine TLS errors (not ECONNREFUSED)
+        const isTlsError = err.message.includes("cert") || err.message.includes("SSL") || 
+                           err.message.includes("TLS") || err.message.includes("CERT") ||
+                           err.message.includes("secure") || err.message.includes("DEPTH_ZERO");
+        const isConnRefused = err.message.includes("ECONNREFUSED");
+        
+        if (this.enableTls && this.allowTlsFallback && isTlsError) {
+          debugLog("[ObsSync] TLS WSS connection failed, falling back to WS:", err.message);
           this.enableTls = false;
           this.emit(EVENTS.TLS_FALLBACK);
           this.scheduleReconnect();
@@ -374,8 +384,9 @@ export class ConnectionManager extends EventEmitter {
         }
 
         // On ECONNREFUSED (remote peer not ready yet), retry with reconnect
-        if (this.shouldReconnect) {
+        if (isConnRefused && this.shouldReconnect) {
           this.scheduleReconnect();
+          return;
         }
       });
 
