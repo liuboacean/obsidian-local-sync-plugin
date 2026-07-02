@@ -4,6 +4,8 @@
 
 import * as crypto from "crypto";
 import * as path from "path";
+import * as fs from "fs";
+import * as fsPromises from "fs/promises";
 import { FileCategory } from "./types";
 import { TEXT_EXTENSIONS, BINARY_EXTENSIONS, HASH_SIZE_LIMIT_BYTES } from "./constants";
 
@@ -18,15 +20,13 @@ import { TEXT_EXTENSIONS, BINARY_EXTENSIONS, HASH_SIZE_LIMIT_BYTES } from "./con
  */
 export async function computeFileHash(filePath: string): Promise<string> {
   try {
-    const { access, constants: fsConstants } = await import("fs/promises");
-    await access(filePath, fsConstants.R_OK);
+    await fsPromises.access(filePath, fs.constants.R_OK);
   } catch {
     return "";
   }
 
   try {
-    const { stat } = await import("fs/promises");
-    const fileStat = await stat(filePath);
+    const fileStat = await fsPromises.stat(filePath);
     if (fileStat.size > HASH_SIZE_LIMIT_BYTES) {
       return "";
     }
@@ -35,10 +35,9 @@ export async function computeFileHash(filePath: string): Promise<string> {
   }
 
   try {
-    const { createReadStream } = await import("fs");
     return new Promise<string>((resolve, reject) => {
       const hash = crypto.createHash("sha256");
-      const stream = createReadStream(filePath);
+      const stream = fs.createReadStream(filePath);
       stream.on("data", (chunk: string | Buffer) => {
         const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
         hash.update(buf);

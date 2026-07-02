@@ -35,7 +35,7 @@ import { createMessage } from "./protocol";
 import { ConnectionManager } from "./connection-manager";
 import { CrdtEngine } from "./crdt-engine";
 import { OsWriter } from "./os-writer";
-import { syncLogger } from "./sync-logger";
+import { debugLog, syncLogger } from "./sync-logger";
 import { LogLevel, SyncEventType } from "./types";
 
 // ============================================================
@@ -83,6 +83,9 @@ export class InitialSyncManager {
   private cancelled = false;
   private progress: SyncProgress = { total: 0, completed: 0, current: "" };
 
+  /** Local file manifest — used by handleFileListAck to find files to transfer. */
+  private localManifest: ManifestEntry[] = [];
+
   /** Batch index tracking for multi-batch file list exchange. */
   private receivedBatches: Set<number> = new Set();
   private totalBatches = 0;
@@ -112,6 +115,7 @@ export class InitialSyncManager {
     try {
       // Phase 1: Build and exchange manifest
       const manifest = await this.buildManifest();
+      this.localManifest = manifest;
       this.progress.total = manifest.length;
       this.progress.completed = 0;
 
@@ -356,11 +360,13 @@ export class InitialSyncManager {
   ): Promise<{ missing: ManifestEntry[]; different: ManifestEntry[] }> {
     const payload = msg.payload;
     if (!payload || !payload.files) {
+      debugLog("[ObsSync] handleRemoteBatch: no files in payload");
       return { missing: [], different: [] };
     }
 
     const batchIndex: number = payload.batchIndex;
     const remoteFiles: ManifestEntry[] = payload.files;
+    debugLog("[ObsSync] handleRemoteBatch batch=" + batchIndex + " files=" + remoteFiles.length);
 
     if (this.receivedBatches.has(batchIndex)) {
       return { missing: [], different: [] };
@@ -394,6 +400,7 @@ export class InitialSyncManager {
     }
 
     // Send ACK with missing/different lists
+    debugLog("[ObsSync] handleRemoteBatch done batch=" + batchIndex + " missing=" + missing.length + " different=" + different.length);
     const ackMsg = createMessage(
       MessageType.FILE_LIST_ACK,
       {
@@ -425,10 +432,7 @@ export class InitialSyncManager {
    * @param msg - The FILE_LIST_ACK message.
    * @param localManifest - The local file manifest.
    */
-  async handleFileListAck(
-    msg: SyncMessage,
-    localManifest: ManifestEntry[],
-  ): Promise<void> {
+  async handleFileListAck(msg: SyncMessage): Promise<void> {
     const payload = msg.payload;
     if (!payload) {
       return;
@@ -439,7 +443,7 @@ export class InitialSyncManager {
 
     // Build map for quick lookup
     const manifestMap = new Map<string, ManifestEntry>();
-    for (const entry of localManifest) {
+    for (const entry of this.localManifest) {
       manifestMap.set(entry.relativePath, entry);
     }
 

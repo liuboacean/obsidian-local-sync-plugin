@@ -10,7 +10,8 @@ export const UDP_DISCOVERY_PORT = 8889;
 // ============================================================
 
 export const DEBOUNCE_MS = 500;
-export const HEARTBEAT_INTERVAL_MS = 30000;
+export const HEARTBEAT_INTERVAL_MS = 120000
+export const HEARTBEAT_TIMEOUT_MS = 240000;
 export const CONFLICT_WINDOW_MS = 30000;
 export const RECONNECT_BASE_MS = 1000;
 export const RECONNECT_MAX_MS = 60000;
