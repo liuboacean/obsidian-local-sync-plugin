@@ -153,6 +153,11 @@ export class ConnectionManager extends EventEmitter {
     }
 
     if (this.mode === SyncMode.CLIENT || this.mode === SyncMode.DUPLEX) {
+      // Don't start client connection if target address is not set
+      if (!this.targetAddress) {
+        console.log("[ObsSync] No target address configured, skipping client connection");
+        return;
+      }
       this.startClientConnection();
     }
   }
@@ -295,6 +300,7 @@ export class ConnectionManager extends EventEmitter {
       const socket = new WebSocket(url);
 
       socket.on("open", () => {
+        console.log("[ObsSync] Client WebSocket OPEN to", this.targetAddress);
         syncLogger.log(
           LogLevel.SUCCESS,
           `Connected to ${this.targetAddress}:${this.port}`,
@@ -302,10 +308,10 @@ export class ConnectionManager extends EventEmitter {
           SyncEventType.CONNECTED,
         );
 
-        // In DUPLEX mode, if already connected via the server, close the client
+        // If already connected via server, use this new socket (fresh) instead
         if (this.isConnected && this.mode === SyncMode.DUPLEX) {
-          socket.close(4000, "Already connected via server");
-          return;
+          console.log("[ObsSync] Already connected via server, replacing with client socket");
+          this.isConnected = false;
         }
 
         this.reconnectAttempts = 0;
