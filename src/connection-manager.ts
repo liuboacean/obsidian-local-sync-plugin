@@ -500,6 +500,20 @@ export class ConnectionManager extends EventEmitter {
           this.deviceName,
         );
         this.sendRawMessage(socket, responseMsg);
+
+        // Mark as connected on the client side too
+        // The server will validate our response and keep the connection
+        this.activeSocket = socket;
+        this.isConnected = true;
+        this.startHeartbeat();
+        console.log("[ObsSync] Client auth response sent, connection established");
+        syncLogger.log(
+          LogLevel.SUCCESS,
+          `Authenticated with peer: ${message.deviceName} (${message.deviceId})`,
+          undefined,
+          SyncEventType.CONNECTED,
+        );
+        this.emit(EVENTS.CONNECTED);
         return true;
       }
 
