@@ -83,7 +83,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     try {
       this.initComponents(vaultPath);
       debugLog("[Obsidian Local Sync] components initialized");
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[Obsidian Local Sync] initComponents FAILED:", err);
     }
 
@@ -91,7 +91,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     try {
       this.bindEvents();
       debugLog("[Obsidian Local Sync] events bound");
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[Obsidian Local Sync] bindEvents FAILED:", err);
     }
 
@@ -99,7 +99,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     try {
       this.watcher.start(vaultPath, this.settings.ignoreFolders, this.settings.ignoreExtensions);
       debugLog("[Obsidian Local Sync] file watcher started");
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[Obsidian Local Sync] file watcher FAILED:", err);
     }
 
@@ -108,7 +108,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       try {
         this.startDiscovery();
         debugLog("[Obsidian Local Sync] UDP discovery started");
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[Obsidian Local Sync] UDP discovery FAILED:", err);
       }
     }
@@ -157,7 +157,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   // Lifecycle: onunload
   // ============================================================
 
-  async onunload(): Promise<void> {
+  onunload(): void {
     debugLog("Obsidian Local Sync: unloading plugin");
 
     // Stop file watcher
@@ -171,7 +171,9 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
 
     // Snapshot all dirty CRDT documents
     if (this.crdtEngine) {
-      await this.crdtEngine.snapshotAllDirty();
+      this.crdtEngine.snapshotAllDirty().catch(() => {
+        // Silently ignore snapshot errors during unload
+      });
       this.crdtEngine.destroy();
     }
 
@@ -467,7 +469,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   }
 
   async saveSettings(): Promise<void> {
-    await this.saveData(this.settings as unknown as Record<string, unknown>);
+    await this.saveData(this.settings);
   }
 
   async startSync(): Promise<void> {

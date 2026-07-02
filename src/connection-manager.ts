@@ -7,8 +7,7 @@
 // automatic reconnection with exponential backoff.
 
 import { EventEmitter } from "events";
-// eslint-disable-next-line @typescript-eslint/no-var-requires -- ws is CJS module; require() needed for esbuild bundling
-const WebSocket = require("ws");
+import WebSocket = require("ws");
 import {
   MessageType,
   SyncMessage,
