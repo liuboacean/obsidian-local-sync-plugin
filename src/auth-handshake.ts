@@ -9,7 +9,7 @@
 import * as crypto from "crypto";
 import { AuthStatus } from "./types";
 import { AUTH_MAX_FAILURES, AUTH_LOCKOUT_MS } from "./constants";
-import { generateDeviceId } from "./utils";
+
 
 // ============================================================
 // Constants
@@ -163,11 +163,11 @@ export function parsePairingToken(
     if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
       return null;
     }
-    const payload = JSON.parse(payloadStr);
+    const payload: Record<string, unknown> = JSON.parse(payloadStr);
     if (typeof payload.deviceId !== "string" || typeof payload.deviceName !== "string") {
       return null;
     }
-    return { deviceId: payload.deviceId, deviceName: payload.deviceName };
+    return { deviceId: payload.deviceId as string, deviceName: payload.deviceName as string };
   } catch {
     return null;
   }

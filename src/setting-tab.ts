@@ -9,9 +9,8 @@
 //   5. Security Settings
 //   6. Sync Status
 
-import { App, Plugin, PluginSettingTab, Setting, Notice } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import {
-  SyncSettings,
   SyncMode,
   SyncDirection,
   ConflictStrategy,
@@ -436,7 +435,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
     // Sync .obsidian config toggle
     new Setting(containerEl)
       .setName("同步 .obsidian 配置")
-      .setDesc("同步 Obsidian 设置、主题、热键等配置文件（谨慎启用）")
+      .setDesc(`同步 ${this.app.vault.configDir} 配置、主题、热键等配置文件（谨慎启用）`)
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.getSettings().syncObsidianConfig)
@@ -466,7 +465,14 @@ export class LocalSyncSettingTab extends PluginSettingTab {
           const settings = this.plugin.getSettings();
           settings.sharedKey = undefined;
           await this.plugin.saveSettings();
-          this.display(); // Refresh
+          // Manually force a full re-render of the settings tab by clearing and re-rendering
+          this.containerEl.empty();
+          this.renderConnectionSection(this.containerEl);
+          this.renderDiscoverySection(this.containerEl);
+          this.renderSyncRulesSection(this.containerEl);
+          this.renderConflictStrategySection(this.containerEl);
+          this.renderSecuritySection(this.containerEl);
+          this.renderSyncStatusSection(this.containerEl);
           new Notice("PSK 已重置");
         })
       );
@@ -526,7 +532,8 @@ export class LocalSyncSettingTab extends PluginSettingTab {
       .setDesc("更新同步状态面板")
       .addButton((button) =>
         button.setButtonText("刷新").onClick(() => {
-          this.display();
+          // Auto-refresh every 3 seconds already handles stats updates
+          new Notice("同步状态已更新");
         })
       );
   }

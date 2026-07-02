@@ -16,9 +16,7 @@ import { CrdtSyncState, FileCategory } from "./types";
 import {
   CRDT_SNAPSHOT_INTERVAL_MS,
   CRDT_MAX_DOC_SIZE_BYTES,
-  EVENTS,
 } from "./constants";
-import { generateDocId } from "./utils";
 
 // ============================================================
 // Constants

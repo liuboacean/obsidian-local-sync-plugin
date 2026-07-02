@@ -9,9 +9,6 @@
 import * as fs from "fs";
 import * as path from "path";
 import { validatePath } from "./path-validator";
-import { classifyFile } from "./utils";
-import { FileCategory } from "./types";
-import { EVENTS } from "./constants";
 import { EventEmitter } from "events";
 
 // ============================================================

@@ -12,10 +12,8 @@ import {
   MessageType,
   SyncMessage,
   SyncMode,
-  AuthStatus,
 } from "./types";
 import {
-  DEFAULT_PORT,
   HEARTBEAT_INTERVAL_MS,
   RECONNECT_BASE_MS,
   RECONNECT_MAX_MS,

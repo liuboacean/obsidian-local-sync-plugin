@@ -12,7 +12,6 @@ import {
   FileChange,
   SyncMessage,
   SyncStats,
-  ChangeType,
   ConflictInfo,
   LogLevel,
   SyncEventType,
@@ -295,8 +294,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
           undefined,
           SyncEventType.SYNC_COMPLETED,
         );
-        // Refresh the settings page to show updated stats
-        this.settingTab?.display();
+        // Refresh is handled by auto-refresh interval in setting-tab
       },
     });
 
@@ -464,7 +462,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const loadedData = await this.loadData();
+    const loadedData: Record<string, unknown> = (await this.loadData()) ?? {};
     this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
   }
 

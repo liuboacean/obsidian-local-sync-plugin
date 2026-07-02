@@ -312,7 +312,6 @@ export class FileWatcher extends EventEmitter {
         if (category === FileCategory.TEXT) {
           try {
             const { readFile } = await import("fs/promises");
-            const content = await readFile(filePath, "utf-8");
             hash = await computeFileHash(filePath);
           } catch {
             // If we can't read the file, skip it

@@ -14,7 +14,6 @@ import {
   FileCategory,
   ConflictInfo,
   ConflictStatus,
-  FileChange,
   ChangeType,
 } from "./types";
 import { CONFLICT_WINDOW_MS } from "./constants";

@@ -4,8 +4,8 @@
 // Displays a modal dialog when a BINARY file conflict is detected.
 // TEXT files use CRDT auto-merge, so only BINARY files trigger this UI.
 
-import { App, Modal, Setting, ButtonComponent } from "obsidian";
-import { ConflictInfo, ConflictStatus } from "./types";
+import { App, Modal, ButtonComponent } from "obsidian";
+import { ConflictInfo } from "./types";
 import { formatTime } from "./utils";
 
 // ============================================================

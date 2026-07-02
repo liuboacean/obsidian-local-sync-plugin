@@ -18,8 +18,6 @@ import {
   FileCategory,
   MessageType,
   SyncMessage,
-  ChangeType,
-  FileChange,
 } from "./types";
 import {
   FILE_LIST_BATCH_SIZE,

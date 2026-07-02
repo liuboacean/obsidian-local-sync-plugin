@@ -20,18 +20,17 @@ import {
   SyncStats,
   SyncStatus,
   ChangeType,
-  ConflictInfo,
   ConflictStatus,
 } from "./types";
 import { EVENTS } from "./constants";
-import { classifyFile, computeFileHash, generateDocId, normalizePath } from "./utils";
-import { serializeMessage, createMessage } from "./protocol";
+import { computeFileHash, generateDocId } from "./utils";
+import { createMessage } from "./protocol";
 import { FileWatcher } from "./file-watcher";
 import { OsWriter } from "./os-writer";
 import { CrdtEngine } from "./crdt-engine";
-import { ConflictDetector, ConflictType } from "./conflict-detector";
+import { ConflictDetector } from "./conflict-detector";
 import { ConnectionManager } from "./connection-manager";
-import { syncLogger, SyncLogger } from "./sync-logger";
+import { syncLogger } from "./sync-logger";
 import { LogLevel, SyncEventType } from "./types";
 import * as path from "path";
 
@@ -418,7 +417,7 @@ export class SyncEngine extends EventEmitter {
           await this.osWriter.writeFile(this.vaultPath, relativePath, mergedContent);
         } else {
           // Full content replacement
-          const doc = this.crdtEngine.initDoc(docId, relativePath, content);
+          this.crdtEngine.initDoc(docId, relativePath, content);
           await this.osWriter.writeFile(this.vaultPath, relativePath, content);
         }
 
@@ -754,7 +753,7 @@ export class SyncEngine extends EventEmitter {
     path: string,
     resolution: "keep_local" | "keep_remote" | "keep_both",
   ): Promise<void> {
-    const conflictInfo = this.conflictDetector.resolveConflict(path, resolution);
+    this.conflictDetector.resolveConflict(path, resolution);
 
     // If resolution is keep_remote, fetch the remote version
     if (resolution === "keep_remote" && this.connectionManager?.getIsConnected()) {
