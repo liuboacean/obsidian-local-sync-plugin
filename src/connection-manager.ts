@@ -328,7 +328,7 @@ export class ConnectionManager extends EventEmitter {
           undefined,
           SyncEventType.ERROR,
         );
-        // On ECONNREFUSED (liubo-pc not ready yet), retry with reconnect
+        // On ECONNREFUSED (remote peer not ready yet), retry with reconnect
         if (this.shouldReconnect) {
           this.scheduleReconnect();
         }
