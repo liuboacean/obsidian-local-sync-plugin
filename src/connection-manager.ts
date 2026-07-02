@@ -8,9 +8,10 @@
 
 import { EventEmitter } from "events";
 // ws package uses conditional exports. esbuild resolves "import" condition to
-// wrapper.mjs which lacks Server/OPEN/default exports. Use require() to force
+// ws package uses conditional exports. esbuild resolves "import" condition to
+// wrapper.mjs which lacks Server/OPEN/default exports. Must use require() to force
 // CJS resolution (index.js) which has all exports.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-var-requires -- ws conditional exports require CJS require()
 const WebSocket = require("ws");
 import {
   MessageType,

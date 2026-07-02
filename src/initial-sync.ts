@@ -89,12 +89,12 @@ const HASH_TIMEOUT_MS = 5000;
  * timeout expires first.
  */
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | "timeout"> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timer: ReturnType<typeof window.setTimeout> | undefined;
   const timeout = new Promise<"timeout">((resolve) => {
-    timer = setTimeout(() => resolve("timeout"), ms);
+    timer = window.setTimeout(() => resolve("timeout"), ms);
   });
   return Promise.race([promise, timeout]).finally(() => {
-    if (timer) clearTimeout(timer);
+    if (timer) window.clearTimeout(timer);
   });
 }
 
