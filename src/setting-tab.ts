@@ -38,7 +38,9 @@ export class LocalSyncSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Obsidian Local Sync" });
+    new Setting(containerEl)
+      .setName("Local Sync")
+      .setHeading();
 
     this.renderConnectionSection(containerEl);
     this.renderDiscoverySection(containerEl);
@@ -105,7 +107,9 @@ export class LocalSyncSettingTab extends PluginSettingTab {
   // ============================================================
 
   private renderConnectionSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "🔌 连接配置" });
+    new Setting(containerEl)
+      .setName("🔌 连接配置")
+      .setHeading();
 
     // Sync mode dropdown
     new Setting(containerEl)
@@ -200,7 +204,9 @@ export class LocalSyncSettingTab extends PluginSettingTab {
   // ============================================================
 
   private renderDiscoverySection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "📡 设备发现" });
+    new Setting(containerEl)
+      .setName("📡 设备发现")
+      .setHeading();
 
     // UDP discovery toggle
     new Setting(containerEl)
@@ -241,8 +247,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
 
     // Discovered devices list
     const devices = this.plugin.discoveryMgr?.getDiscoveredDevices() ?? [];
-    const deviceListEl = containerEl.createDiv("discovery-device-list");
-    deviceListEl.style.marginTop = "8px";
+    const deviceListEl = containerEl.createDiv({ cls: "discovery-device-list" + " local-sync-mt-8" });
 
     if (devices.length === 0) {
       deviceListEl.createEl("p", {
@@ -319,7 +324,9 @@ export class LocalSyncSettingTab extends PluginSettingTab {
   // ============================================================
 
   private renderSyncRulesSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "📋 同步规则" });
+    new Setting(containerEl)
+      .setName("📋 同步规则")
+      .setHeading();
 
     // Ignore folders
     new Setting(containerEl)
@@ -380,7 +387,9 @@ export class LocalSyncSettingTab extends PluginSettingTab {
   // ============================================================
 
   private renderConflictStrategySection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "⚡ 冲突策略" });
+    new Setting(containerEl)
+      .setName("⚡ 冲突策略")
+      .setHeading();
 
     new Setting(containerEl)
       .setName("二进制文件冲突策略")
@@ -421,7 +430,9 @@ export class LocalSyncSettingTab extends PluginSettingTab {
   // ============================================================
 
   private renderSecuritySection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "🔒 安全设置" });
+    new Setting(containerEl)
+      .setName("🔒 安全设置")
+      .setHeading();
 
     // Sync .obsidian config toggle
     new Setting(containerEl)
@@ -467,7 +478,9 @@ export class LocalSyncSettingTab extends PluginSettingTab {
   // ============================================================
 
   private renderSyncStatusSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "📊 同步状态" });
+    new Setting(containerEl)
+      .setName("📊 同步状态")
+      .setHeading();
 
     const stats: SyncStats | null =
       this.plugin.engine?.getSyncStats() ?? null;

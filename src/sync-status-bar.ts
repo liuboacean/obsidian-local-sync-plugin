@@ -197,7 +197,7 @@ export class SyncStatusBar {
       this.syncingInterval = null;
     }
     if (this.statusBarEl) {
-      this.statusBarEl.style.color = "";
+      this.statusBarEl.classList.remove("sync-status-error");
     }
   }
 }
