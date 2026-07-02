@@ -7,7 +7,7 @@
 // automatic reconnection with exponential backoff.
 
 import { EventEmitter } from "events";
-import WebSocket = require("ws");
+import WebSocket from "ws";
 import {
   MessageType,
   SyncMessage,

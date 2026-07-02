@@ -462,7 +462,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
-    const loadedData: Record<string, unknown> = (await this.loadData()) ?? {};
+    const loadedData = (await this.loadData() as Record<string, unknown>) ?? {};
     this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
   }
 

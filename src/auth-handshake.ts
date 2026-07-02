@@ -163,11 +163,11 @@ export function parsePairingToken(
     if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
       return null;
     }
-    const payload: Record<string, unknown> = JSON.parse(payloadStr);
+    const payload = JSON.parse(payloadStr) as Record<string, unknown>;
     if (typeof payload.deviceId !== "string" || typeof payload.deviceName !== "string") {
       return null;
     }
-    return { deviceId: payload.deviceId as string, deviceName: payload.deviceName as string };
+    return { deviceId: payload.deviceId, deviceName: payload.deviceName };
   } catch {
     return null;
   }

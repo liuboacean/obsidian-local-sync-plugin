@@ -434,7 +434,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
 
     // Sync .obsidian config toggle
     new Setting(containerEl)
-      .setName("同步 .obsidian 配置")
+      .setName(`同步 ${this.app.vault.configDir} 配置`)
       .setDesc(`同步 ${this.app.vault.configDir} 配置、主题、热键等配置文件（谨慎启用）`)
       .addToggle((toggle) =>
         toggle

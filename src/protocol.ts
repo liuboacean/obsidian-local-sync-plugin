@@ -72,7 +72,7 @@ export function serializeMessage(msg: SyncMessage): string {
  */
 export function deserializeMessage(data: string): SyncMessage | null {
   try {
-    const parsed: Record<string, unknown> = JSON.parse(data);
+    const parsed = JSON.parse(data) as Record<string, unknown>;
     if (typeof parsed !== "object" || parsed === null) {
       return null;
     }
