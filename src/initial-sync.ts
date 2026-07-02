@@ -474,6 +474,10 @@ export class InitialSyncManager {
         undefined,
         SyncEventType.SYNC_COMPLETED,
       );
+      this.emitProgress();
+      if (payload.allComplete) {
+        this.options.onFullSyncComplete?.(this.transferredCount);
+      }
       return;
     }
 

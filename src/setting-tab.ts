@@ -46,6 +46,58 @@ export class LocalSyncSettingTab extends PluginSettingTab {
     this.renderConflictStrategySection(containerEl);
     this.renderSecuritySection(containerEl);
     this.renderSyncStatusSection(containerEl);
+
+    // Auto-refresh stats every 3 seconds while settings page is open
+    this.plugin.registerInterval(
+      window.setInterval(() => {
+        // Find and update the status section desc elements in-place
+        this.updateStatsInPlace(containerEl);
+      }, 3000)
+    );
+  }
+
+  /**
+   * Update the stats section in-place without rebuilding the entire page.
+   */
+  private updateStatsInPlace(containerEl: HTMLElement): void {
+    const stats = this.plugin.engine?.getSyncStats() ?? null;
+    const isConnected = this.plugin.connMgr?.getIsConnected() ?? false;
+
+    // Find the "连接状态" setting and update its desc
+    const allSettings = Array.from(containerEl.querySelectorAll(".setting-item-info"));
+    for (const info of allSettings) {
+      const nameEl = info.querySelector(".setting-item-name");
+      if (!nameEl) continue;
+      const name = nameEl.textContent || "";
+
+      // The desc is the next sibling element
+      const descEl = info.nextElementSibling?.querySelector(".setting-item-description");
+      if (!descEl) continue;
+
+      switch (name) {
+        case "连接状态":
+          descEl.textContent = isConnected ? "🟢 已连接" : "🔴 未连接";
+          break;
+        case "上次同步":
+          descEl.textContent = stats?.lastSyncTime ?? "尚未同步";
+          break;
+        case "待同步文件":
+          descEl.textContent = String(stats?.pendingFiles ?? 0);
+          break;
+        case "已同步文件":
+          descEl.textContent = String(stats?.syncedFiles ?? 0);
+          break;
+        case "冲突文件":
+          descEl.textContent = String(stats?.conflictedFiles ?? 0);
+          break;
+        case "发现设备":
+          const deviceCount =
+            (this.plugin.discoveryMgr?.getDiscoveredDevices()?.length ?? 0) +
+            (isConnected ? 1 : 0);
+          descEl.textContent = String(deviceCount);
+          break;
+      }
+    }
   }
 
   // ============================================================
