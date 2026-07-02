@@ -143,7 +143,13 @@ export class ConnectionManager extends EventEmitter {
     );
 
     if (this.mode === SyncMode.SERVER || this.mode === SyncMode.DUPLEX) {
-      await this.startServer();
+      // Server may already be running from auto-start in onload()
+      // Avoid EADDRINUSE by checking before starting again
+      if (!this.server) {
+        await this.startServer();
+      } else {
+        console.log("[ObsSync] Server already running, skipping duplicate start");
+      }
     }
 
     if (this.mode === SyncMode.CLIENT || this.mode === SyncMode.DUPLEX) {
