@@ -324,9 +324,25 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       });
 
       // Request full sync on first connection
-      this.initialSync.startFullSync().catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `initialSync error: ${err}`, undefined, SyncEventType.ERROR);
-      });
+      this.initialSync.startFullSync()
+        .then(() => {
+          // Update sync stats after initial sync completes
+          const now = new Date();
+          const timeStr = now.toLocaleString("zh-CN", {
+            year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit",
+          });
+          this.engine.setLastSyncTime(timeStr);
+          syncLogger.log(
+            LogLevel.SUCCESS,
+            "Initial sync completed",
+            undefined,
+            SyncEventType.SYNC_COMPLETED,
+          );
+        })
+        .catch((err) => {
+          syncLogger.log(LogLevel.ERROR, `initialSync error: ${err}`, undefined, SyncEventType.ERROR);
+        });
     });
 
     this.connMgr.on("disconnected", () => {

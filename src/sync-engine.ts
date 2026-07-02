@@ -815,4 +815,11 @@ export class SyncEngine extends EventEmitter {
   isRunning(): boolean {
     return this.running;
   }
+
+  /**
+   * Update the last sync time. Called when initial sync completes.
+   */
+  setLastSyncTime(time: string): void {
+    this.stats.lastSyncTime = time;
+  }
 }
