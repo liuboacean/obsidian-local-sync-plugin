@@ -317,11 +317,12 @@ export class ConnectionManager extends EventEmitter {
         this.reconnectAttempts = 0;
         this.clientSocket = socket;
         this.activeSocket = socket;
-        this.isConnected = true;
         this.setupSocketHandlers(socket);
         this.startHeartbeat();
-        this.initAuthHandshake(socket);
-        this.emit(EVENTS.CONNECTED);
+        // Do NOT call initAuthHandshake here — the server will initiate auth.
+        // Client should only RESPOND to the server's challenge.
+        // Letting both sides send challenges causes authSession corruption.
+        debugLog("[ObsSync] Client socket open, waiting for server auth challenge");
       });
 
       socket.on("error", (err: Error) => {
