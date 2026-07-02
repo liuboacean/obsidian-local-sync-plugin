@@ -485,45 +485,46 @@ export class ConnectionManager extends EventEmitter {
    * Returns true if the message was an auth message (and was handled).
    */
   private handleAuthMessage(socket: WebSocket, message: SyncMessage): boolean {
+    // HANDSHAKE (challenge) does not require authSession — client side
+    // responds to server's challenge using sharedKey directly.
+    if (message.type === MessageType.HANDSHAKE) {
+      const challenge = message.payload?.challenge;
+      if (!challenge || typeof challenge !== "string") {
+        return true;
+      }
+
+      const psk = this.sharedKey || "default-key";
+      const response = computeExpectedResponse(challenge, psk);
+
+      const responseMsg = createMessage(
+        MessageType.HANDSHAKE_ACK,
+        { response },
+        this.deviceId,
+        this.deviceName,
+      );
+      this.sendRawMessage(socket, responseMsg);
+
+      // Mark as connected on the client side too
+      this.activeSocket = socket;
+      this.isConnected = true;
+      this.startHeartbeat();
+      debugLog("[ObsSync] Client responded to server auth challenge, connected");
+      syncLogger.log(
+        LogLevel.SUCCESS,
+        `Authenticated with peer: ${message.deviceName} (${message.deviceId})`,
+        undefined,
+        SyncEventType.CONNECTED,
+      );
+      this.emit(EVENTS.CONNECTED);
+      return true;
+    }
+
+    // Other auth messages require authSession (only server side)
     if (!this.authSession) {
       return false;
     }
 
     switch (message.type) {
-      case MessageType.HANDSHAKE: {
-        // Received a challenge — respond to it
-        const challenge = message.payload?.challenge;
-        if (!challenge || typeof challenge !== "string") {
-          return true;
-        }
-
-        const psk = this.sharedKey || "default-key";
-        const response = computeExpectedResponse(challenge, psk);
-
-        const responseMsg = createMessage(
-          MessageType.HANDSHAKE_ACK,
-          { response },
-          this.deviceId,
-          this.deviceName,
-        );
-        this.sendRawMessage(socket, responseMsg);
-
-        // Mark as connected on the client side too
-        // The server will validate our response and keep the connection
-        this.activeSocket = socket;
-        this.isConnected = true;
-        this.startHeartbeat();
-        debugLog("[ObsSync] Client auth response sent, connection established");
-        syncLogger.log(
-          LogLevel.SUCCESS,
-          `Authenticated with peer: ${message.deviceName} (${message.deviceId})`,
-          undefined,
-          SyncEventType.CONNECTED,
-        );
-        this.emit(EVENTS.CONNECTED);
-        return true;
-      }
-
       case MessageType.HANDSHAKE_ACK: {
         // Received a response to our challenge — verify it
         const response = message.payload?.response;
