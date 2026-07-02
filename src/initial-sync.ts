@@ -86,6 +86,9 @@ export class InitialSyncManager {
   /** Local file manifest — used by handleFileListAck to find files to transfer. */
   private localManifest: ManifestEntry[] = [];
 
+  /** Total files transferred during this sync session. */
+  private transferredCount = 0;
+
   /** Batch index tracking for multi-batch file list exchange. */
   private receivedBatches: Set<number> = new Set();
   private totalBatches = 0;
@@ -577,6 +580,7 @@ export class InitialSyncManager {
       }
 
       this.progress.completed++;
+      this.transferredCount++;
       this.emitProgress();
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -604,6 +608,13 @@ export class InitialSyncManager {
     if (this.options.onProgress) {
       this.options.onProgress(progress);
     }
+  }
+
+  /**
+   * Get the number of files transferred in the current sync session.
+   */
+  getTransferredCount(): number {
+    return this.transferredCount;
   }
 
   /**
