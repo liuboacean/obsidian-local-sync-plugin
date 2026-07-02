@@ -422,7 +422,8 @@ export class LocalSyncSettingTab extends PluginSettingTab {
     const isConnected =
       this.plugin.connMgr?.getIsConnected() ?? false;
     const deviceCount =
-      this.plugin.discoveryMgr?.getDiscoveredDevices()?.length ?? 0;
+      (this.plugin.discoveryMgr?.getDiscoveredDevices()?.length ?? 0) +
+      (isConnected ? 1 : 0);
 
     // Connection status
     const statusText = isConnected ? "🟢 已连接" : "🔴 未连接";
