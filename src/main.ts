@@ -278,8 +278,9 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       onProgress: (progress) => {
         this.statusBar?.setSyncProgress(progress.completed, progress.total);
       },
-      onFullSyncComplete: (count) => {
+      onFullSyncComplete: (count, vaultFileCount) => {
         this.engine.setInitialSyncCount(count);
+        this.engine.setVaultFileCount(vaultFileCount);
         const now = new Date();
         const timeStr = now.toLocaleString("zh-CN", {
           year: "numeric", month: "2-digit", day: "2-digit",
@@ -288,7 +289,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
         this.engine.setLastSyncTime(timeStr);
         syncLogger.log(
           LogLevel.SUCCESS,
-          `Initial sync completed: ${count} files synced`,
+          `Initial sync completed: ${count} files transferred, vault has ${vaultFileCount} files`,
           undefined,
           SyncEventType.SYNC_COMPLETED,
         );

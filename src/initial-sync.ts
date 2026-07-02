@@ -64,8 +64,10 @@ interface FullSyncOptions {
   crdtEngine: CrdtEngine;
   osWriter: OsWriter;
   onProgress?: (progress: SyncProgress) => void;
-  /** Called when full initial sync completes (all file transfers done). */
-  onFullSyncComplete?: (totalTransferred: number) => void;
+  /** Called when full initial sync completes (all file transfers done).
+   * @param totalTransferred - Number of files transferred this sync
+   * @param vaultFileCount - Total number of files in local vault manifest */
+  onFullSyncComplete?: (totalTransferred: number, vaultFileCount: number) => void;
 }
 
 // ============================================================
@@ -476,7 +478,7 @@ export class InitialSyncManager {
       );
       this.emitProgress();
       if (payload.allComplete) {
-        this.options.onFullSyncComplete?.(this.transferredCount);
+        this.options.onFullSyncComplete?.(this.transferredCount, this.localManifest.length);
       }
       return;
     }
@@ -501,7 +503,7 @@ export class InitialSyncManager {
       // Notify the host that full sync is complete.
       // If allComplete is set, this is the last ACK batch.
       if (payload.allComplete) {
-        this.options.onFullSyncComplete?.(this.transferredCount);
+        this.options.onFullSyncComplete?.(this.transferredCount, this.localManifest.length);
       }
     }
   }
