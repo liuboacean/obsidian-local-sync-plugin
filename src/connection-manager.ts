@@ -24,7 +24,7 @@ import {
 } from "./constants";
 import { serializeMessage, deserializeMessage, createMessage } from "./protocol";
 import { AuthSession, createAuthSession, computeExpectedResponse } from "./auth-handshake";
-import { syncLogger } from "./sync-logger";
+import { debugLog, syncLogger } from "./sync-logger";
 import { LogLevel, SyncEventType } from "./types";
 
 // ============================================================
@@ -148,14 +148,14 @@ export class ConnectionManager extends EventEmitter {
       if (!this.server) {
         await this.startServer();
       } else {
-        console.log("[ObsSync] Server already running, skipping duplicate start");
+        debugLog("[ObsSync] Server already running, skipping duplicate start");
       }
     }
 
     if (this.mode === SyncMode.CLIENT || this.mode === SyncMode.DUPLEX) {
       // Don't start client connection if target address is not set
       if (!this.targetAddress) {
-        console.log("[ObsSync] No target address configured, skipping client connection");
+        debugLog("[ObsSync] No target address configured, skipping client connection");
         return;
       }
       this.startClientConnection();
@@ -199,7 +199,7 @@ export class ConnectionManager extends EventEmitter {
    * Public so main.ts can auto-start it in onload().
    */
   async startServer(): Promise<void> {
-    console.log("[ObsSync] startServer() port:", this.port);
+    debugLog("[ObsSync] startServer() port:", this.port);
     try {
       this.server = new WebSocket.Server({
         port: this.port,
@@ -228,7 +228,7 @@ export class ConnectionManager extends EventEmitter {
       });
 
       this.server.on("error", (err: Error) => {
-        console.error("[ObsSync] Server ERROR:", err.message);
+        debugLog("[ObsSync] Server ERROR: " + err.message);
         syncLogger.log(
           LogLevel.ERROR,
           `Server error: ${err.message}`,
@@ -239,7 +239,7 @@ export class ConnectionManager extends EventEmitter {
       });
 
       this.server.on("listening", () => {
-        console.log("[ObsSync] Server LISTENING on port", this.port);
+        debugLog("[ObsSync] Server LISTENING on port", this.port);
         syncLogger.log(
           LogLevel.SUCCESS,
           `Server listening on port ${this.port}`,
@@ -256,7 +256,7 @@ export class ConnectionManager extends EventEmitter {
       );
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      console.error("[ObsSync] startServer() CATCH:", errorMessage);
+      debugLog("[ObsSync] startServer() CATCH: " + errorMessage);
       syncLogger.log(
         LogLevel.ERROR,
         `Failed to start server: ${errorMessage}`,
@@ -288,7 +288,7 @@ export class ConnectionManager extends EventEmitter {
     }
 
     const url = `ws://${this.targetAddress}:${this.port}`;
-    console.log("[ObsSync] Connecting to:", url, "mode:", this.mode, "isConnected:", this.isConnected);
+    debugLog("[ObsSync] Connecting to:", url, "mode:", this.mode, "isConnected:", this.isConnected);
     syncLogger.log(
       LogLevel.INFO,
       `Connecting to ${url}`,
@@ -300,7 +300,7 @@ export class ConnectionManager extends EventEmitter {
       const socket = new WebSocket(url);
 
       socket.on("open", () => {
-        console.log("[ObsSync] Client WebSocket OPEN to", this.targetAddress);
+        debugLog("[ObsSync] Client WebSocket OPEN to", this.targetAddress);
         syncLogger.log(
           LogLevel.SUCCESS,
           `Connected to ${this.targetAddress}:${this.port}`,
@@ -310,7 +310,7 @@ export class ConnectionManager extends EventEmitter {
 
         // If already connected via server, use this new socket (fresh) instead
         if (this.isConnected && this.mode === SyncMode.DUPLEX) {
-          console.log("[ObsSync] Already connected via server, replacing with client socket");
+          debugLog("[ObsSync] Already connected via server, replacing with client socket");
           this.isConnected = false;
         }
 
@@ -512,7 +512,7 @@ export class ConnectionManager extends EventEmitter {
         this.activeSocket = socket;
         this.isConnected = true;
         this.startHeartbeat();
-        console.log("[ObsSync] Client auth response sent, connection established");
+        debugLog("[ObsSync] Client auth response sent, connection established");
         syncLogger.log(
           LogLevel.SUCCESS,
           `Authenticated with peer: ${message.deviceName} (${message.deviceId})`,
