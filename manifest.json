@@ -1,7 +1,7 @@
 {
   "id": "local-sync",
   "name": "Local Sync",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "minAppVersion": "1.4.0",
   "description": "LAN bidirectional vault sync \u2014 CRDT auto-merge, PSK auth, UDP discovery.",
   "author": "liuboacean",
