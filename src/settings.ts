@@ -2,7 +2,7 @@
 // Settings — Defaults, Load, Save
 // ============================================================
 
-import * as os from "os";
+import * as crypto from "crypto";
 import type { SyncSettings } from "./types";
 import { SyncMode, SyncDirection, ConflictStrategy } from "./types";
 import { DEFAULT_PORT, UDP_DISCOVERY_PORT } from "./constants";
@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: SyncSettings = {
   mode: SyncMode.DUPLEX,
   port: DEFAULT_PORT,
   targetAddress: "",
-  deviceName: os.hostname(),
+  deviceName: `Device-${crypto.randomBytes(4).toString("hex")}`,
   ignoreFolders: [".trash"],
   ignoreExtensions: [".tmp", ".bak"],
   direction: SyncDirection.BIDIRECTIONAL,
