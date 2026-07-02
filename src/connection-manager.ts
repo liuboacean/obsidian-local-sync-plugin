@@ -7,7 +7,8 @@
 // automatic reconnection with exponential backoff.
 
 import { EventEmitter } from "events";
-import WebSocket from "ws";
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const WebSocket = require("ws");
 import {
   MessageType,
   SyncMessage,
