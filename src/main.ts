@@ -333,9 +333,10 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
             hour: "2-digit", minute: "2-digit",
           });
           this.engine.setLastSyncTime(timeStr);
+          this.engine.setInitialSyncCount(this.initialSync.getTransferredCount());
           syncLogger.log(
             LogLevel.SUCCESS,
-            "Initial sync completed",
+            "Initial sync completed, " + this.initialSync.getTransferredCount() + " files synced",
             undefined,
             SyncEventType.SYNC_COMPLETED,
           );

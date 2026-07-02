@@ -99,6 +99,8 @@ export class SyncEngine extends EventEmitter {
     transferredBytes: 0,
     lastSyncTime: undefined,
   };
+  /** Counter for files synced during initial full sync (not tracked in fileStates). */
+  private initialSyncFileCount = 0;
 
   /** Whether the engine is running. */
   private running = false;
@@ -803,7 +805,7 @@ export class SyncEngine extends EventEmitter {
 
     return {
       ...this.stats,
-      syncedFiles: syncedCount,
+      syncedFiles: syncedCount + this.initialSyncFileCount,
       conflictedFiles: conflictedCount,
       failedFiles: failedCount,
     };
@@ -821,5 +823,12 @@ export class SyncEngine extends EventEmitter {
    */
   setLastSyncTime(time: string): void {
     this.stats.lastSyncTime = time;
+  }
+
+  /**
+   * Set the count of files transferred during initial full sync.
+   */
+  setInitialSyncCount(count: number): void {
+    this.initialSyncFileCount = count;
   }
 }
