@@ -75,6 +75,48 @@ interface FullSyncOptions {
 const MANIFEST_DIR_NAME = ".obsidian-sync";
 const MANIFEST_FILE_NAME = "manifest.json";
 const CONCURRENT_TRANSFERS = 10;
+/** Max time (ms) to spend computing hash for a single file during batch comparison.
+ *  If exceeded, the file is treated as "different" and re-synced. */
+const HASH_TIMEOUT_MS = 5000;
+
+// ============================================================
+// Helpers
+// ============================================================
+
+/**
+ * Race a promise against a timeout.
+ * Resolves to the promise's value, or rejects with "timeout" if the
+ * timeout expires first.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | "timeout"> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<"timeout">((resolve) => {
+    timer = setTimeout(() => resolve("timeout"), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+/**
+ * Check whether a local file matches the remote hash.
+ * Returns "same" | "different" | "missing".
+ */
+async function compareLocalFile(
+  localPath: string,
+  remoteHash: string,
+): Promise<"same" | "different" | "missing"> {
+  try {
+    await fs.promises.access(localPath, fs.constants.R_OK);
+    const localHash = await computeFileHash(localPath);
+    if (localHash !== "" && localHash === remoteHash) {
+      return "same";
+    }
+    return "different";
+  } catch {
+    return "missing";
+  }
+}
 
 // ============================================================
 // Initial Sync Manager Class
@@ -391,17 +433,25 @@ export class InitialSyncManager {
         remoteEntry.relativePath,
       );
 
-      try {
-        await fs.promises.access(localPath, fs.constants.R_OK);
-        // File exists locally — check hash
-        const localHash = await computeFileHash(localPath);
-        if (localHash !== remoteEntry.hash) {
-          different.push(remoteEntry);
-        }
-      } catch {
-        // File does not exist locally — it's missing
+      // Compare file with timeout — if hashing takes too long, treat as
+      // "different" so the file gets re-synced rather than hanging forever.
+      const result = await withTimeout(
+        compareLocalFile(localPath, remoteEntry.hash),
+        HASH_TIMEOUT_MS,
+      );
+
+      if (result === "missing") {
         missing.push(remoteEntry);
+      } else if (result === "different") {
+        different.push(remoteEntry);
+        syncLogger.log(
+          LogLevel.DEBUG,
+          `handleRemoteBatch: hash timeout for "${remoteEntry.relativePath}" — marking different`,
+          remoteEntry.relativePath,
+          SyncEventType.FILE_PUSHED,
+        );
       }
+      // "same" → skip, file is already in sync
     }
 
     // Send ACK with missing/different lists
