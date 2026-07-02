@@ -485,7 +485,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
   // ============================================================
 
   private renderTlsSection(containerEl: HTMLElement): void {
-    containerEl.createEl("h3", { text: "🔒 传输加密" });
+    new Setting(containerEl).setName("🔒 传输加密").setHeading();
 
     // TLS enable toggle
     new Setting(containerEl)
@@ -533,7 +533,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
       .addButton((btn) =>
         btn
           .setButtonText("重置证书")
-          .setWarning()
+          .setDestructive().setCta()
           .onClick(async () => {
             const confirmed = await this.confirmResetCert();
             if (confirmed) {

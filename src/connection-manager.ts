@@ -8,9 +8,8 @@
 
 import { EventEmitter } from "events";
 // ws conditional exports: esbuild resolves "import" to wrapper.mjs which
-// lacks Server/OPEN/default exports. Use require() to force CJS resolution.
-// eslint-disable-next-line @typescript-eslint/no-var-requires -- ws conditional exports need CJS require()
-const WebSocket = require("ws");
+// lacks Server/OPEN/default exports. Use import = require for correct CJS.
+import WebSocket = require("ws");
 import * as http from "http";
 import * as https from "https";
 import type { TlsOptions } from "./cert-manager";
