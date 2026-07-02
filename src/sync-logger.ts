@@ -245,3 +245,13 @@ export class SyncLogger {
  * Import this singleton for consistent logging across modules.
  */
 export const syncLogger = new SyncLogger();
+
+/**
+ * Write a debug message to both console.log and the sync log file.
+ * This is the primary way to emit diagnostic logs that can be read
+ * remotely from the log file at ~/.obsidian-sync/logs/sync.log.
+ */
+export function debugLog(message: string): void {
+  console.log(message);
+  syncLogger.log(LogLevel.DEBUG, message.replace(/^\[Obs(ync|idian Local Sync)] /, ""), undefined, SyncEventType.SYNC_STARTED);
+}

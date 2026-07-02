@@ -29,7 +29,7 @@ import { SyncEngine } from "./sync-engine";
 import { ConnectionManager } from "./connection-manager";
 import { DiscoveryManager } from "./discovery-manager";
 import { InitialSyncManager } from "./initial-sync";
-import { syncLogger } from "./sync-logger";
+import { syncLogger, debugLog } from "./sync-logger";
 import { generateDeviceId } from "./utils";
 
 // ============================================================
@@ -59,9 +59,12 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   // ============================================================
 
   async onload(): Promise<void> {
-    console.log("Obsidian Local Sync: loading plugin");
+    // Initialize log directory so all log entries are persisted to file
+    await syncLogger.initLogDir();
+    debugLog("[Obsidian Local Sync] loading plugin...");
 
     await this.loadSettings();
+    debugLog("[Obsidian Local Sync] settings loaded, deviceId: " + this.settings.deviceId);
 
     // Initialize device ID (persisted in settings)
     this.deviceId = this.settings.deviceId || generateDeviceId();
@@ -72,35 +75,63 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
 
     // Get vault path
     const vaultPath = (this.app.vault.adapter as any).getBasePath?.() || "";
+    debugLog("[Obsidian Local Sync] vaultPath:", vaultPath);
 
     // Initialize components
-    this.initComponents(vaultPath);
+    try {
+      this.initComponents(vaultPath);
+      debugLog("[Obsidian Local Sync] components initialized");
+    } catch (err) {
+      console.error("[Obsidian Local Sync] initComponents FAILED:", err);
+    }
 
     // Bind component events
-    this.bindEvents();
+    try {
+      this.bindEvents();
+      debugLog("[Obsidian Local Sync] events bound");
+    } catch (err) {
+      console.error("[Obsidian Local Sync] bindEvents FAILED:", err);
+    }
 
     // Start file watcher
-    this.watcher.start(vaultPath, this.settings.ignoreFolders, this.settings.ignoreExtensions);
+    try {
+      this.watcher.start(vaultPath, this.settings.ignoreFolders, this.settings.ignoreExtensions);
+      debugLog("[Obsidian Local Sync] file watcher started");
+    } catch (err) {
+      console.error("[Obsidian Local Sync] file watcher FAILED:", err);
+    }
 
     // Start UDP discovery if enabled
     if (this.settings.enableUdpDiscovery) {
-      this.startDiscovery();
+      try {
+        this.startDiscovery();
+        debugLog("[Obsidian Local Sync] UDP discovery started");
+      } catch (err) {
+        console.error("[Obsidian Local Sync] UDP discovery FAILED:", err);
+      }
     }
 
     // Auto-start the WebSocket server on plugin load
     // This allows other devices to connect to this instance
-    this.connMgr.startServer().catch((err) => {
-      syncLogger.log(LogLevel.ERROR, `Auto-start server failed: ${err}`, undefined, SyncEventType.ERROR);
-    });
+    this.connMgr.startServer()
+      .then(() => debugLog("[Obsidian Local Sync] WebSocket server started on port", this.settings.port))
+      .catch((err) => {
+        console.error("[Obsidian Local Sync] Server start FAILED:", err);
+        syncLogger.log(LogLevel.ERROR, `Auto-start server failed: ${err}`, undefined, SyncEventType.ERROR);
+      });
 
     // Register settings tab
     this.addSettingTab(new LocalSyncSettingTab(this.app, this));
 
     // Register status bar
     this.statusBar.registerStatusBar();
+    debugLog("[Obsidian Local Sync] settings tab + status bar registered");
 
     // Register commands
     this.registerCommands();
+    debugLog("[Obsidian Local Sync] commands registered");
+
+    debugLog("[Obsidian Local Sync] plugin load COMPLETE. Device ID:", this.deviceId);
 
     syncLogger.log(
       LogLevel.SUCCESS,
@@ -115,7 +146,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   // ============================================================
 
   async onunload(): Promise<void> {
-    console.log("Obsidian Local Sync: unloading plugin");
+    debugLog("Obsidian Local Sync: unloading plugin");
 
     // Stop file watcher
     this.watcher?.stop();
