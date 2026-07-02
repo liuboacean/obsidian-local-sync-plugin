@@ -5,7 +5,7 @@
 // CrdtEngine, ConflictDetector, SyncEngine, DiscoveryManager,
 // InitialSyncManager, Logger, StatusBar, and Settings.
 
-import { Plugin, TFile } from "obsidian";
+import { Plugin, TFile, FileSystemAdapter } from "obsidian";
 import {
   SyncSettings,
   SyncMode,
@@ -76,7 +76,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     }
 
     // Get vault path
-    const vaultPath = (this.app.vault.adapter as any).getBasePath?.() || "";
+    const vaultPath = (this.app.vault.adapter as FileSystemAdapter).getBasePath?.() || "";
     debugLog("[Obsidian Local Sync] vaultPath:", vaultPath);
 
     // Initialize components
@@ -207,7 +207,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       delete: async (path: string) => {
         const file = this.app.vault.getAbstractFileByPath(path);
         if (file instanceof TFile) {
-          await this.app.vault.delete(file);
+          await this.app.fileManager.trashFile(file);
         }
       },
       rename: async (oldPath: string, newPath: string) => {

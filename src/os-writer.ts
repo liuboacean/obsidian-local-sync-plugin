@@ -165,7 +165,7 @@ export class OsWriter extends EventEmitter {
         return;
       } catch (err: unknown) {
         if (attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+          await new Promise((resolve) => window.setTimeout(resolve, retryDelayMs));
         } else {
           throw err;
         }

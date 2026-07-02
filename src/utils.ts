@@ -141,5 +141,5 @@ export function generateDocId(filePath: string): string {
  * Promise-based sleep for the specified duration.
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }

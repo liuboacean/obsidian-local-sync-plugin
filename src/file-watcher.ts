@@ -135,7 +135,7 @@ export class FileWatcher extends EventEmitter {
     this.watching = true;
 
     // Start periodic cleanup of recently-pushed map
-    this.cleanupTimer = setInterval(() => {
+    this.cleanupTimer = window.setInterval(() => {
       this.cleanupRecentlyPushed();
     }, RECENTLY_PUSHED_TTL_MS);
   }
@@ -150,13 +150,13 @@ export class FileWatcher extends EventEmitter {
 
     // Clear all debounce timers
     for (const timer of this.debounceTimers.values()) {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
     }
     this.debounceTimers.clear();
 
     // Clear cleanup timer
     if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
+      window.clearInterval(this.cleanupTimer);
       this.cleanupTimer = null;
     }
 
@@ -260,13 +260,13 @@ export class FileWatcher extends EventEmitter {
     // Cancel existing debounce timer for this path
     const existing = this.debounceTimers.get(filePath);
     if (existing) {
-      clearTimeout(existing);
+      window.clearTimeout(existing);
     }
 
     // Schedule new debounce timer
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       this.debounceTimers.delete(filePath);
-      this.emitChange(filePath, changeType);
+      this.emitChange(filePath, changeType).catch(err => console.error(err));
     }, DEBOUNCE_MS);
 
     this.debounceTimers.set(filePath, timer);
@@ -284,11 +284,11 @@ export class FileWatcher extends EventEmitter {
     // Cancel any pending debounce timer for this path
     const existing = this.debounceTimers.get(filePath);
     if (existing) {
-      clearTimeout(existing);
+      window.clearTimeout(existing);
       this.debounceTimers.delete(filePath);
     }
 
-    this.emitChange(filePath, changeType);
+    this.emitChange(filePath, changeType).catch(err => console.error(err));
   }
 
   /**

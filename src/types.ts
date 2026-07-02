@@ -152,7 +152,7 @@ export interface SyncMessage {
   deviceId: string;
   deviceName: string;
   timestamp: number;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
 export interface SyncStats {

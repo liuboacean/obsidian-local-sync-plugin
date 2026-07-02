@@ -84,7 +84,7 @@ export class CrdtEngine extends EventEmitter {
     }
 
     // Start periodic snapshot timer
-    this.snapshotTimer = setInterval(() => {
+    this.snapshotTimer = window.setInterval(() => {
       this.snapshotAllDirty().catch(() => {
         // Silently ignore snapshot errors
       });
@@ -99,12 +99,12 @@ export class CrdtEngine extends EventEmitter {
    */
   destroy(): void {
     if (this.snapshotTimer) {
-      clearInterval(this.snapshotTimer);
+      window.clearInterval(this.snapshotTimer);
       this.snapshotTimer = null;
     }
 
     for (const timer of this.dirtyTimers.values()) {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
     }
     this.dirtyTimers.clear();
 
@@ -201,7 +201,7 @@ export class CrdtEngine extends EventEmitter {
 
     const timer = this.dirtyTimers.get(docId);
     if (timer) {
-      clearTimeout(timer);
+      window.clearTimeout(timer);
       this.dirtyTimers.delete(docId);
     }
   }

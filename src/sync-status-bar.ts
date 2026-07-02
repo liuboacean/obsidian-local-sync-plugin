@@ -178,11 +178,9 @@ export class SyncStatusBar {
     this.stopSyncingAnimation();
 
     let visible = true;
-    this.syncingInterval = setInterval(() => {
+    this.syncingInterval = window.setInterval(() => {
       if (this.statusBarEl) {
-        this.statusBarEl.style.color = visible
-          ? "var(--text-accent, #6c8cff)"
-          : "var(--text-muted, #999)";
+        this.statusBarEl.classList.toggle("sync-status-blinking", visible);
         visible = !visible;
       }
     }, 800);
@@ -193,11 +191,12 @@ export class SyncStatusBar {
    */
   private stopSyncingAnimation(): void {
     if (this.syncingInterval) {
-      clearInterval(this.syncingInterval);
+      window.clearInterval(this.syncingInterval);
       this.syncingInterval = null;
     }
     if (this.statusBarEl) {
-      this.statusBarEl.style.color = "";
+      this.statusBarEl.classList.remove("sync-status-error");
+      this.statusBarEl.classList.remove("sync-status-blinking");
     }
   }
 }

@@ -372,7 +372,7 @@ export class DiscoveryManager extends EventEmitter {
     // Broadcast immediately on start
     this.broadcastPresence();
 
-    this.broadcastTimer = setInterval(() => {
+    this.broadcastTimer = window.setInterval(() => {
       this.broadcastPresence();
     }, UDP_DISCOVERY_INTERVAL_MS);
   }
@@ -382,7 +382,7 @@ export class DiscoveryManager extends EventEmitter {
    */
   private stopBroadcasting(): void {
     if (this.broadcastTimer) {
-      clearInterval(this.broadcastTimer);
+      window.clearInterval(this.broadcastTimer);
       this.broadcastTimer = null;
     }
   }
@@ -394,7 +394,7 @@ export class DiscoveryManager extends EventEmitter {
   private startCleanupTimer(): void {
     this.stopCleanupTimer();
 
-    this.cleanupTimer = setInterval(() => {
+    this.cleanupTimer = window.setInterval(() => {
       this.cleanupStaleDevices();
     }, UDP_DEVICE_TIMEOUT_MS / 2);
   }
@@ -404,7 +404,7 @@ export class DiscoveryManager extends EventEmitter {
    */
   private stopCleanupTimer(): void {
     if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
+      window.clearInterval(this.cleanupTimer);
       this.cleanupTimer = null;
     }
   }

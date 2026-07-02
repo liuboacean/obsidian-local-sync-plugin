@@ -7,7 +7,7 @@
 // automatic reconnection with exponential backoff.
 
 import { EventEmitter } from "events";
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-var-requires -- ws is CJS module; require() needed for esbuild bundling
 const WebSocket = require("ws");
 import {
   MessageType,
@@ -660,7 +660,7 @@ export class ConnectionManager extends EventEmitter {
   private startHeartbeat(): void {
     this.stopHeartbeat();
 
-    this.heartbeatTimer = setInterval(() => {
+    this.heartbeatTimer = window.setInterval(() => {
       if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
         try {
           this.activeSocket.ping();
@@ -676,7 +676,7 @@ export class ConnectionManager extends EventEmitter {
         }
 
         // Set a timeout for pong response
-        this.heartbeatTimeoutTimer = setTimeout(() => {
+        this.heartbeatTimeoutTimer = window.setTimeout(() => {
           syncLogger.log(
             LogLevel.WARN,
             "Heartbeat timeout — no pong received",
@@ -694,11 +694,11 @@ export class ConnectionManager extends EventEmitter {
    */
   private stopHeartbeat(): void {
     if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
+      window.clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
     if (this.heartbeatTimeoutTimer) {
-      clearTimeout(this.heartbeatTimeoutTimer);
+      window.clearTimeout(this.heartbeatTimeoutTimer);
       this.heartbeatTimeoutTimer = null;
     }
   }
@@ -723,7 +723,7 @@ export class ConnectionManager extends EventEmitter {
    */
   private handlePong(): void {
     if (this.heartbeatTimeoutTimer) {
-      clearTimeout(this.heartbeatTimeoutTimer);
+      window.clearTimeout(this.heartbeatTimeoutTimer);
       this.heartbeatTimeoutTimer = null;
     }
   }
@@ -773,7 +773,7 @@ export class ConnectionManager extends EventEmitter {
 
     this.emit(EVENTS.RECONNECTING, { delay, attempt: this.reconnectAttempts });
 
-    this.reconnectTimer = setTimeout(() => {
+    this.reconnectTimer = window.setTimeout(() => {
       if (!this.shouldReconnect) {
         return;
       }
@@ -789,7 +789,7 @@ export class ConnectionManager extends EventEmitter {
    */
   private clearReconnectTimer(): void {
     if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
+      window.clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
   }

@@ -47,7 +47,7 @@ function isValidSyncMessage(obj: Record<string, unknown>): boolean {
     isNonEmptyString(obj.deviceName) &&
     typeof obj.timestamp === "number" &&
     obj.timestamp > 0 &&
-    obj.hasOwnProperty("payload")
+    "payload" in obj
   );
 }
 
@@ -91,7 +91,7 @@ export function deserializeMessage(data: string): SyncMessage | null {
  */
 export function createMessage(
   type: MessageType,
-  payload: unknown,
+  payload: Record<string, unknown>,
   deviceId: string,
   deviceName: string,
 ): SyncMessage {
