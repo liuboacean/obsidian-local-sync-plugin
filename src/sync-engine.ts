@@ -101,6 +101,8 @@ export class SyncEngine extends EventEmitter {
   };
   /** Counter for files synced during initial full sync (not tracked in fileStates). */
   private initialSyncFileCount = 0;
+  /** Total files in the vault (set after initial sync). Used for synced count display. */
+  private vaultFileCount = 0;
 
   /** Whether the engine is running. */
   private running = false;
@@ -805,10 +807,18 @@ export class SyncEngine extends EventEmitter {
 
     return {
       ...this.stats,
-      syncedFiles: syncedCount + this.initialSyncFileCount,
+      syncedFiles: this.vaultFileCount > 0 ? this.vaultFileCount : syncedCount + this.initialSyncFileCount,
       conflictedFiles: conflictedCount,
       failedFiles: failedCount,
     };
+  }
+
+  /**
+   * Set total vault file count (from initial sync manifest).
+   * This gives a meaningful "已同步文件" number to the user.
+   */
+  setVaultFileCount(count: number): void {
+    this.vaultFileCount = count;
   }
 
   /**
