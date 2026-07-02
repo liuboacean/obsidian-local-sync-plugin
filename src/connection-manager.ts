@@ -187,6 +187,7 @@ export class ConnectionManager extends EventEmitter {
    * Public so main.ts can auto-start it in onload().
    */
   async startServer(): Promise<void> {
+    console.log("[ObsSync] startServer() port:", this.port);
     try {
       this.server = new WebSocket.Server({
         port: this.port,
@@ -215,6 +216,7 @@ export class ConnectionManager extends EventEmitter {
       });
 
       this.server.on("error", (err: Error) => {
+        console.error("[ObsSync] Server ERROR:", err.message);
         syncLogger.log(
           LogLevel.ERROR,
           `Server error: ${err.message}`,
@@ -225,6 +227,7 @@ export class ConnectionManager extends EventEmitter {
       });
 
       this.server.on("listening", () => {
+        console.log("[ObsSync] Server LISTENING on port", this.port);
         syncLogger.log(
           LogLevel.SUCCESS,
           `Server listening on port ${this.port}`,
@@ -241,6 +244,7 @@ export class ConnectionManager extends EventEmitter {
       );
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
+      console.error("[ObsSync] startServer() CATCH:", errorMessage);
       syncLogger.log(
         LogLevel.ERROR,
         `Failed to start server: ${errorMessage}`,
@@ -272,6 +276,7 @@ export class ConnectionManager extends EventEmitter {
     }
 
     const url = `ws://${this.targetAddress}:${this.port}`;
+    console.log("[ObsSync] Connecting to:", url, "mode:", this.mode, "isConnected:", this.isConnected);
     syncLogger.log(
       LogLevel.INFO,
       `Connecting to ${url}`,
