@@ -392,28 +392,41 @@ export class ConnectionManager extends EventEmitter {
    * Handle an incoming WebSocket message.
    */
   private handleIncomingMessage(socket: WebSocket, data: WebSocket.Data): void {
-    // Binary data — forward as CRDT update event only
-    // Do NOT emit MESSAGE_RECEIVED — binary is not a SyncMessage
-    if (data instanceof Buffer || data instanceof ArrayBuffer) {
+    // Try to decode Buffer data as UTF-8 text first
+    // In Obsidian Electron, ws library delivers text frames as Buffer
+    if (data instanceof Buffer) {
+      const text = data.toString("utf-8");
+      // If it starts with { or [, it's likely JSON text, not binary CRDT
+      if (text.startsWith("{") || text.startsWith("[")) {
+        const message = deserializeMessage(text);
+        if (message) {
+          // Valid JSON message — handle as text
+          this.handleTextMessage(socket, message);
+          return;
+        }
+      }
+      // Not JSON text — forward as CRDT binary update
+      this.emit(EVENTS.CRDT_UPDATE_RECEIVED, data);
+      return;
+    }
+    
+    if (data instanceof ArrayBuffer) {
       this.emit(EVENTS.CRDT_UPDATE_RECEIVED, data);
       return;
     }
 
     // Text data — parse as JSON message
     const messageStr = typeof data === "string" ? data : data.toString();
-    debugLog("[ObsSync] Incoming text (first 100): " + messageStr.substring(0, 100));
     const message = deserializeMessage(messageStr);
-
-    if (!message) {
-      syncLogger.log(
-        LogLevel.WARN,
-        "Received malformed message",
-        undefined,
-        SyncEventType.ERROR,
-      );
-      return;
+    if (message) {
+      this.handleTextMessage(socket, message);
     }
+  }
 
+  /**
+   * Process a parsed SyncMessage (text or JSON-decoded Buffer).
+   */
+  private handleTextMessage(socket: WebSocket, message: SyncMessage): void {
     // Deduplication
     if (this.processedMessages.has(message.uuid)) {
       return;
@@ -494,7 +507,6 @@ export class ConnectionManager extends EventEmitter {
   private handleAuthMessage(socket: WebSocket, message: SyncMessage): boolean {
     // HANDSHAKE (challenge) does not require authSession — client side
     // responds to server's challenge using sharedKey directly.
-    debugLog("[ObsSync] handleAuthMessage called, msg.type=" + message.type + ", hasAuthSession=" + (this.authSession !== null));
     if (message.type === MessageType.HANDSHAKE) {
       const challenge = message.payload?.challenge;
       if (!challenge || typeof challenge !== "string") {
