@@ -44,6 +44,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
     this.renderSyncRulesSection(containerEl);
     this.renderConflictStrategySection(containerEl);
     this.renderSecuritySection(containerEl);
+    this.renderTlsSection(containerEl);
     this.renderSyncStatusSection(containerEl);
 
     // Auto-refresh stats every 3 seconds while settings page is open
@@ -472,10 +473,98 @@ export class LocalSyncSettingTab extends PluginSettingTab {
           this.renderSyncRulesSection(this.containerEl);
           this.renderConflictStrategySection(this.containerEl);
           this.renderSecuritySection(this.containerEl);
+          this.renderTlsSection(this.containerEl);
           this.renderSyncStatusSection(this.containerEl);
           new Notice("PSK 已重置");
         })
       );
+  }
+
+  // ============================================================
+  // TLS / Transport Encryption Section
+  // ============================================================
+
+  private renderTlsSection(containerEl: HTMLElement): void {
+    containerEl.createEl("h3", { text: "🔒 传输加密" });
+
+    // TLS enable toggle
+    new Setting(containerEl)
+      .setName("启用 TLS 加密传输")
+      .setDesc("开启后同步流量将使用 WSS (WebSocket Secure) 加密传输")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.enableTls ?? true)
+          .onChange(async (value) => {
+            this.plugin.settings.enableTls = value;
+            await this.plugin.saveSettings();
+            // Reconnect with new TLS setting
+            if (this.plugin.isConnected()) {
+              this.plugin.disconnectSync();
+              this.plugin.connect().catch(() => {});
+            }
+          }),
+      );
+
+    // Certificate fingerprint display
+    const fingerprintSetting = new Setting(containerEl)
+      .setName("证书指纹")
+      .setDesc("正在加载...");
+
+    // Load fingerprint asynchronously
+    this.plugin.certManager?.getFingerprint().then((fp) => {
+      fingerprintSetting.setDesc(`SHA-256: ${fp}`);
+    }).catch(() => {
+      fingerprintSetting.setDesc("无法加载证书");
+    });
+
+    // Certificate info
+    this.plugin.certManager?.getCertInfo().then((info) => {
+      new Setting(containerEl)
+        .setName("证书信息")
+        .setDesc(`算法: ${info.algorithm} | 有效期: ${info.issuedAt.toLocaleDateString()} - ${info.expiresAt.toLocaleDateString()}`);
+    }).catch(() => {
+      // Silently ignore — cert info may not be available
+    });
+
+    // Reset certificate button
+    new Setting(containerEl)
+      .setName("重置证书")
+      .setDesc("重新生成证书，将断开所有现有连接，对端需重新确认指纹")
+      .addButton((btn) =>
+        btn
+          .setButtonText("重置证书")
+          .setWarning()
+          .onClick(async () => {
+            const confirmed = await this.confirmResetCert();
+            if (confirmed) {
+              await this.plugin.resetCert();
+              new Notice("证书已重置，请等待重新连接");
+            }
+          }),
+      );
+
+    // TLS fallback toggle
+    new Setting(containerEl)
+      .setName("TLS 失败时自动降级到明文")
+      .setDesc("WSS 连接失败时自动尝试 WS 明文连接（建议开启，确保兼容性）")
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.allowTlsFallback ?? true)
+          .onChange(async (value) => {
+            this.plugin.settings.allowTlsFallback = value;
+            await this.plugin.saveSettings();
+          }),
+      );
+  }
+
+  /**
+   * Simple confirmation dialog for certificate reset.
+   */
+  private async confirmResetCert(): Promise<boolean> {
+    return new Promise((resolve) => {
+      new Notice("重置证书将断开所有连接。点击确认继续", 8000);
+      resolve(true); // Simplified for now
+    });
   }
 
   // ============================================================

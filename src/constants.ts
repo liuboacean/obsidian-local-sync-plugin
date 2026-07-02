@@ -22,6 +22,16 @@ export const UDP_DEVICE_TIMEOUT_MS = 30000;
 export const CRDT_SNAPSHOT_INTERVAL_MS = 300000; // 5min dirty-flag check
 
 // ============================================================
+// TLS Certificate Constants
+// ============================================================
+
+export const CERT_DIR_NAME = "certs";
+export const CERT_DIR_PREFIX = ".obsidian-sync";
+export const CERT_FILE_NAME = "cert.pem";
+export const KEY_FILE_NAME = "key.pem";
+export const CERT_DAYS_VALID = 3650; // 10 years
+
+// ============================================================
 // Size & Count Limits
 // ============================================================
 
@@ -89,4 +99,9 @@ export const EVENTS = {
   DEVICE_DISCOVERED: "device-discovered",
   DEVICE_LOST: "device-lost",
   CRDT_UPDATE_RECEIVED: "crdt-update-received",
+
+  // TLS
+  TLS_FALLBACK: "tls-fallback",
+  TLS_ERROR: "tls-error",
+  CERT_RESET: "cert-reset",
 } as const;

@@ -10,6 +10,9 @@ import {
   serializeBinary,
   deserializeBinary,
   generateUuid,
+  createCertFingerprintMessage,
+  createCertFingerprintAck,
+  createTlsFallbackNotify,
 } from "../../src/protocol";
 import { MessageType } from "../../src/types";
 
@@ -220,5 +223,40 @@ describe("serializeBinary / deserializeBinary", () => {
     expect(buffer.length).toBe(3);
     expect(buffer[0]).toBe(2);
     expect(buffer[2]).toBe(4);
+  });
+});
+
+// ============================================================
+// TLS Protocol Messages
+// ============================================================
+
+describe("TLS Protocol Messages", () => {
+  it("should create cert-fingerprint message", () => {
+    const fp = "3A:4B:5C:6D:7E:8F:90:1A:2B:3C:4D:5E:6F:70:81:92:A3:B4:C5:D6:E7:F8:09:10:11:12:13:14:15:16:17:18";
+    const msg = createCertFingerprintMessage(fp, "ECDSA-P256", "dev1", "My Device");
+    expect(msg.type).toBe(MessageType.CERT_FINGERPRINT);
+    expect(msg.payload.fingerprint).toBe(fp);
+    expect(msg.payload.algorithm).toBe("ECDSA-P256");
+    expect(msg.deviceId).toBe("dev1");
+  });
+
+  it("should create cert-fingerprint-ack message", () => {
+    const msg = createCertFingerprintAck(true, "dev2", "Other Device");
+    expect(msg.type).toBe(MessageType.CERT_FINGERPRINT_ACK);
+    expect(msg.payload.accepted).toBe(true);
+  });
+
+  it("should create TLS fallback notification message", () => {
+    const msg = createTlsFallbackNotify("ECONNREFUSED", "dev1", "My Device");
+    expect(msg.type).toBe(MessageType.TLS_FALLBACK_NOTIFY);
+    expect(msg.payload.reason).toBe("ECONNREFUSED");
+  });
+
+  it("should round-trip serialization for fingerprint messages", () => {
+    const msg = createCertFingerprintMessage("AA:BB:CC:DD", "ECDSA-P256", "dev1", "Dev");
+    const serialized = JSON.stringify(msg);
+    const deserialized = JSON.parse(serialized);
+    expect(deserialized.type).toBe("CERT_FINGERPRINT");
+    expect(deserialized.payload.fingerprint).toBe("AA:BB:CC:DD");
   });
 });

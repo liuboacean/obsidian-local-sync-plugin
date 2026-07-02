@@ -11,6 +11,9 @@ import { EventEmitter } from "events";
 // lacks Server/OPEN/default exports. Use require() to force CJS resolution.
 // eslint-disable-next-line @typescript-eslint/no-var-requires -- ws conditional exports need CJS require()
 const WebSocket = require("ws");
+import * as http from "http";
+import * as https from "https";
+import type { TlsOptions } from "./cert-manager";
 import {
   MessageType,
   SyncMessage,
@@ -38,6 +41,9 @@ export interface ConnectionManagerOptions {
   deviceId: string;
   deviceName: string;
   sharedKey?: string;
+  enableTls?: boolean;
+  tlsOptions?: TlsOptions | null;
+  allowTlsFallback?: boolean;
 }
 
 // ============================================================
@@ -52,10 +58,16 @@ export class ConnectionManager extends EventEmitter {
   private deviceName: string;
   private sharedKey: string;
 
+  private enableTls: boolean;
+  private tlsOptions: TlsOptions | null;
+  private allowTlsFallback: boolean;
+  private trustedFingerprints: string[] = [];
+
   private server: WebSocket.Server | null = null;
   private clientSocket: WebSocket | null = null;
   private serverSocket: WebSocket | null = null;
   private activeSocket: WebSocket | null = null;
+  private httpServer: http.Server | https.Server | null = null;
 
   private authSession: AuthSession | null = null;
   private isConnected = false;
@@ -82,6 +94,9 @@ export class ConnectionManager extends EventEmitter {
     this.deviceId = options.deviceId;
     this.deviceName = options.deviceName;
     this.sharedKey = options.sharedKey || "";
+    this.enableTls = options.enableTls ?? true;
+    this.tlsOptions = options.tlsOptions || null;
+    this.allowTlsFallback = options.allowTlsFallback ?? true;
 
     this.setMaxListeners(20);
   }
@@ -173,6 +188,7 @@ export class ConnectionManager extends EventEmitter {
     this.stopHeartbeat();
     this.clearReconnectTimer();
     this.closeSockets();
+    this.closeHttpServer();
     this.processedMessages.clear();
 
     syncLogger.log(
@@ -201,10 +217,28 @@ export class ConnectionManager extends EventEmitter {
   async startServer(): Promise<void> {
     debugLog("[ObsSync] startServer() port:", this.port);
     try {
-      this.server = new WebSocket.Server({
-        port: this.port,
-        maxPayload: 100 * 1024 * 1024, // 100 MB
-      });
+      if (this.enableTls && this.tlsOptions?.isReady) {
+        // WSS server with TLS
+        this.httpServer = https.createServer({
+          key: this.tlsOptions.keyPem,
+          cert: this.tlsOptions.certPem,
+        });
+        this.server = new WebSocket.Server({
+          server: this.httpServer,
+          maxPayload: 100 * 1024 * 1024, // 100 MB
+        });
+        this.httpServer.listen(this.port);
+        debugLog("[ObsSync] WSS Server starting with TLS on port", this.port);
+      } else {
+        // Plain WS server
+        this.httpServer = http.createServer();
+        this.server = new WebSocket.Server({
+          server: this.httpServer,
+          maxPayload: 100 * 1024 * 1024, // 100 MB
+        });
+        this.httpServer.listen(this.port);
+        debugLog("[ObsSync] WS Server starting (plain) on port", this.port);
+      }
 
       this.server.on("connection", (socket: WebSocket) => {
         syncLogger.log(
@@ -281,7 +315,8 @@ export class ConnectionManager extends EventEmitter {
       return;
     }
 
-    const url = `ws://${this.targetAddress}:${this.port}`;
+    const protocol = this.enableTls ? "wss" : "ws";
+    const url = `${protocol}://${this.targetAddress}:${this.port}`;
     debugLog("[ObsSync] Connecting to:", url, "mode:", this.mode, "isConnected:", this.isConnected);
     syncLogger.log(
       LogLevel.INFO,
@@ -328,6 +363,16 @@ export class ConnectionManager extends EventEmitter {
           undefined,
           SyncEventType.ERROR,
         );
+
+        // TLS/WSS connection failed — try fallback to plain WS
+        if (this.enableTls && this.allowTlsFallback) {
+          debugLog("[ObsSync] TLS connection failed, falling back to WS:", err.message);
+          this.enableTls = false;
+          this.emit(EVENTS.TLS_FALLBACK);
+          this.scheduleReconnect();
+          return;
+        }
+
         // On ECONNREFUSED (remote peer not ready yet), retry with reconnect
         if (this.shouldReconnect) {
           this.scheduleReconnect();
@@ -452,6 +497,20 @@ export class ConnectionManager extends EventEmitter {
     // Handle heartbeat messages
     if (message.type === MessageType.HEARTBEAT) {
       this.handleHeartbeatMessage(socket);
+      return;
+    }
+
+    // Handle cert-fingerprint messages (TLS)
+    if (message.type === MessageType.CERT_FINGERPRINT) {
+      this.handleCertFingerprintMessage(socket, message);
+      return;
+    }
+    if (message.type === MessageType.CERT_FINGERPRINT_ACK) {
+      this.handleCertFingerprintAck(message);
+      return;
+    }
+    if (message.type === MessageType.TLS_FALLBACK_NOTIFY) {
+      this.handleTlsFallbackNotify(message);
       return;
     }
 
@@ -582,6 +641,81 @@ export class ConnectionManager extends EventEmitter {
       default:
         return false;
     }
+  }
+
+  // ============================================================
+  // TLS / Certificate Fingerprint Handling
+  // ============================================================
+
+  /**
+   * Handle an incoming CERT_FINGERPRINT message.
+   * If the fingerprint is already trusted, auto-accept.
+   * Otherwise, emit an event for the UI to show PIN confirmation.
+   */
+  private handleCertFingerprintMessage(socket: WebSocket, message: SyncMessage): void {
+    const remoteFingerprint = message.payload?.fingerprint as string | undefined;
+    if (!remoteFingerprint) return;
+
+    if (this.trustedFingerprints.includes(remoteFingerprint)) {
+      // Auto-accept: already trusted
+      const ack = createMessage(
+        MessageType.CERT_FINGERPRINT_ACK,
+        { accepted: true },
+        this.deviceId,
+        this.deviceName,
+      );
+      this.sendRawMessage(socket, ack);
+    } else {
+      // Not trusted — emit event so main.ts can show PIN confirmation
+      this.emit(EVENTS.CERT_FINGERPRINT, { socket, fingerprint: remoteFingerprint });
+    }
+
+    // Send our own fingerprint
+    if (this.tlsOptions?.fingerprint) {
+      const msg = createMessage(
+        MessageType.CERT_FINGERPRINT,
+        { fingerprint: this.tlsOptions.fingerprint, algorithm: "ECDSA-P256" },
+        this.deviceId,
+        this.deviceName,
+      );
+      this.sendRawMessage(socket, msg);
+    }
+  }
+
+  /**
+   * Handle an incoming CERT_FINGERPRINT_ACK message.
+   */
+  private handleCertFingerprintAck(message: SyncMessage): void {
+    const accepted = message.payload?.accepted as boolean | undefined;
+    debugLog("[ObsSync] Cert fingerprint ack received, accepted:", accepted);
+    if (!accepted) {
+      syncLogger.log(
+        LogLevel.WARN,
+        "Remote peer rejected our certificate fingerprint",
+        undefined,
+        SyncEventType.ERROR,
+      );
+    }
+  }
+
+  /**
+   * Handle an incoming TLS_FALLBACK_NOTIFY message.
+   */
+  private handleTlsFallbackNotify(message: SyncMessage): void {
+    const reason = message.payload?.reason as string | undefined;
+    syncLogger.log(
+      LogLevel.WARN,
+      `Remote peer fell back to plain WS: ${reason || "unknown reason"}`,
+      undefined,
+      SyncEventType.ERROR,
+    );
+  }
+
+  /**
+   * Set the list of trusted certificate fingerprints.
+   */
+  setTrustedFingerprints(fingerprints: string[]): void {
+    this.trustedFingerprints = fingerprints;
   }
 
   // ============================================================
@@ -836,6 +970,20 @@ export class ConnectionManager extends EventEmitter {
         // Already closed
       }
       this.server = null;
+    }
+  }
+
+  /**
+   * Close the HTTP/S server.
+   */
+  private closeHttpServer(): void {
+    if (this.httpServer) {
+      try {
+        this.httpServer.close();
+      } catch {
+        /* ignore */
+      }
+      this.httpServer = null;
     }
   }
 }

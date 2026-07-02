@@ -29,6 +29,11 @@ export const DEFAULT_SETTINGS: SyncSettings = {
     ".json", ".yaml", ".yml", ".xml", ".svg",
     ".csv", ".log", ".canvas",
   ],
+
+  // TLS
+  enableTls: true,
+  allowTlsFallback: true,
+  trustedFingerprints: [],
 };
 
 // ============================================================

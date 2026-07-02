@@ -120,3 +120,56 @@ export function serializeBinary(payload: Uint8Array): Buffer {
 export function deserializeBinary(data: Buffer): Uint8Array {
   return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
 }
+
+// ============================================================
+// TLS Message Factory Functions
+// ============================================================
+
+/**
+ * Create a cert-fingerprint message for TLS PIN verification.
+ */
+export function createCertFingerprintMessage(
+  fingerprint: string,
+  algorithm: string,
+  deviceId: string,
+  deviceName: string,
+): SyncMessage {
+  return createMessage(
+    "CERT_FINGERPRINT" as unknown as MessageType,
+    { fingerprint, algorithm },
+    deviceId,
+    deviceName,
+  );
+}
+
+/**
+ * Create a cert-fingerprint-ack message.
+ */
+export function createCertFingerprintAck(
+  accepted: boolean,
+  deviceId: string,
+  deviceName: string,
+): SyncMessage {
+  return createMessage(
+    "CERT_FINGERPRINT_ACK" as unknown as MessageType,
+    { accepted },
+    deviceId,
+    deviceName,
+  );
+}
+
+/**
+ * Create a TLS fallback notification message.
+ */
+export function createTlsFallbackNotify(
+  reason: string,
+  deviceId: string,
+  deviceName: string,
+): SyncMessage {
+  return createMessage(
+    "TLS_FALLBACK_NOTIFY" as unknown as MessageType,
+    { reason },
+    deviceId,
+    deviceName,
+  );
+}

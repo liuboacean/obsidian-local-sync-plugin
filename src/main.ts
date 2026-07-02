@@ -31,6 +31,10 @@ import { DiscoveryManager } from "./discovery-manager";
 import { InitialSyncManager } from "./initial-sync";
 import { syncLogger, debugLog } from "./sync-logger";
 import { generateDeviceId } from "./utils";
+import { CertManager } from "./cert-manager";
+import type { TlsOptions } from "./cert-manager";
+import * as path from "path";
+import * as os from "os";
 
 // ============================================================
 // Plugin Main Class
@@ -51,6 +55,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   statusBar!: SyncStatusBar;
   settingTab: LocalSyncSettingTab | null = null;
   osWriter!: OsWriter;
+  certManager!: CertManager;
 
   /** Generated unique device ID (persistent per vault). */
   private deviceId: string = "";
@@ -80,7 +85,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
 
     // Initialize components
     try {
-      this.initComponents(vaultPath);
+      await this.initComponents(vaultPath);
       debugLog("[Obsidian Local Sync] components initialized");
     } catch (err: unknown) {
       console.error("[Obsidian Local Sync] initComponents FAILED:", err);
@@ -191,7 +196,27 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   // Component Initialization
   // ============================================================
 
-  private initComponents(vaultPath: string): void {
+  private async initComponents(vaultPath: string): Promise<void> {
+    // Initialize TLS Certificate Manager
+    const certDir = path.join(os.homedir(), ".obsidian-sync", "certs");
+    this.certManager = new CertManager(certDir);
+
+    // Get TLS options if TLS is enabled
+    let tlsOptions: TlsOptions | undefined;
+    if (this.settings.enableTls) {
+      try {
+        const result = await this.certManager.getTlsOptions();
+        tlsOptions = result;
+      } catch (err) {
+        syncLogger.log(
+          LogLevel.WARN,
+          `TLS init failed, using plain WS: ${err}`,
+          undefined,
+          SyncEventType.ERROR,
+        );
+      }
+    }
+
     // File watcher
     this.watcher = new FileWatcher();
 
@@ -256,10 +281,16 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       deviceId: this.deviceId,
       deviceName: this.settings.deviceName,
       sharedKey: this.settings.sharedKey,
+      enableTls: this.settings.enableTls,
+      tlsOptions: tlsOptions || null,
+      allowTlsFallback: this.settings.allowTlsFallback,
     });
 
     // Wire ConnectionManager to SyncEngine
     this.engine.setConnectionManager(this.connMgr);
+
+    // Pass trusted fingerprints to ConnectionManager
+    this.connMgr.setTrustedFingerprints(this.settings.trustedFingerprints || []);
 
     // Discovery Manager
     this.discoveryMgr = new DiscoveryManager({
@@ -422,6 +453,21 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       const count = this.discoveryMgr.getDiscoveredDevices().length;
       this.statusBar.setDeviceCount(count);
     });
+
+    // TLS Events
+    this.connMgr.on(EVENTS.TLS_FALLBACK, () => {
+      this.statusBar.updateConnectionStatus("warning");
+      syncLogger.log(LogLevel.WARN, "TLS connection failed, fallback to plain WS", undefined, SyncEventType.ERROR);
+    });
+
+    this.connMgr.on(EVENTS.TLS_ERROR, () => {
+      this.statusBar.updateConnectionStatus("disconnected");
+      syncLogger.log(LogLevel.ERROR, "TLS connection failed, no fallback", undefined, SyncEventType.ERROR);
+    });
+
+    this.connMgr.on(EVENTS.CERT_RESET, () => {
+      syncLogger.log(LogLevel.INFO, "Certificate reset", undefined, SyncEventType.INFO);
+    });
   }
 
   // ============================================================
@@ -487,6 +533,23 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
 
   stopDiscovery(): void {
     this.discoveryMgr.stopDiscovery();
+  }
+
+  async resetCert(): Promise<void> {
+    await this.certManager.resetCert();
+    this.settings.trustedFingerprints = [];
+    await this.saveSettings();
+    this.connMgr.disconnect();
+    // Reconnect with new cert
+    this.startSync().catch(() => {});
+  }
+
+  isConnected(): boolean {
+    return this.connMgr?.getIsConnected() ?? false;
+  }
+
+  connect(): Promise<void> {
+    return this.startSync();
   }
 
   connectToDevice(ip: string, port: number): void {

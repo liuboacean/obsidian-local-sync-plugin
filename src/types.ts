@@ -41,6 +41,10 @@ export enum MessageType {
   CRDT_SYNC_FULL = "CRDT_SYNC_FULL",
   DISCOVERY_ANNOUNCE = "DISCOVERY_ANNOUNCE",
   DISCOVERY_RESPONSE = "DISCOVERY_RESPONSE",
+  // TLS
+  CERT_FINGERPRINT = "CERT_FINGERPRINT",
+  CERT_FINGERPRINT_ACK = "CERT_FINGERPRINT_ACK",
+  TLS_FALLBACK_NOTIFY = "TLS_FALLBACK_NOTIFY",
 }
 
 export enum LogLevel {
@@ -189,6 +193,10 @@ export interface SyncSettings {
   udpDiscoveryPort: number;
   crdtEnabled: boolean;
   textExtensions: string[];
+  // TLS
+  enableTls?: boolean;
+  allowTlsFallback?: boolean;
+  trustedFingerprints?: string[];
 }
 
 export interface DiscoveredDevice {
@@ -218,4 +226,30 @@ export interface QRDeviceInfo {
   port: number;
   pskPrefix: string;
   timestamp: number;
+}
+
+// ============================================================
+// TLS Message Interfaces
+// ============================================================
+
+export interface CertFingerprintMessage {
+  type: string;
+  fingerprint: string;
+  algorithm: string;
+  deviceId: string;
+}
+
+export interface CertFingerprintAckMessage {
+  type: string;
+  accepted: boolean;
+  deviceId: string;
+}
+
+export interface CertInfo {
+  fingerprint: string;
+  algorithm: string;
+  issuedAt: Date;
+  expiresAt: Date;
+  serialNumber: string;
+  isExpired: boolean;
 }
