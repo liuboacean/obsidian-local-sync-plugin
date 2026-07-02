@@ -208,7 +208,8 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       delete: async (path: string) => {
         const file = this.app.vault.getAbstractFileByPath(path);
         if (file instanceof TFile) {
-          await this.app.fileManager.trashFile(file);
+          // Using Vault.delete() for minAppVersion 1.4.0 compatibility
+          await this.app.vault.delete(file);
         }
       },
       rename: async (oldPath: string, newPath: string) => {

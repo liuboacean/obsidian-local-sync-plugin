@@ -7,11 +7,9 @@
 // automatic reconnection with exponential backoff.
 
 import { EventEmitter } from "events";
-// ws package uses conditional exports. esbuild resolves "import" condition to
-// ws package uses conditional exports. esbuild resolves "import" condition to
-// wrapper.mjs which lacks Server/OPEN/default exports. Must use require() to force
-// CJS resolution (index.js) which has all exports.
-// eslint-disable-next-line @typescript-eslint/no-var-requires -- ws conditional exports require CJS require()
+// ws conditional exports: esbuild resolves "import" to wrapper.mjs which
+// lacks Server/OPEN/default exports. Use require() to force CJS resolution.
+// eslint-disable-next-line @typescript-eslint/no-var-requires -- ws conditional exports need CJS require()
 const WebSocket = require("ws");
 import {
   MessageType,
