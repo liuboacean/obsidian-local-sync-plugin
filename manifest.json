@@ -1,9 +1,9 @@
 {
-  "id": "obsidian-local-sync",
-  "name": "Obsidian Local Sync",
-  "version": "1.0.0",
+  "id": "local-sync",
+  "name": "Local Sync",
+  "version": "1.0.1",
   "minAppVersion": "1.4.0",
-  "description": "LAN bidirectional sync plugin for Obsidian vaults",
+  "description": "LAN bidirectional vault sync \u2014 CRDT auto-merge, PSK auth, UDP discovery",
   "author": "liuboacean",
   "authorUrl": "https://github.com/liuboacean",
   "isDesktopOnly": true

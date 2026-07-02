@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔄 Obsidian Local Sync
+# 🔄 Local Sync
 
 **Zero-cloud, zero-conflict, zero-config — LAN bidirectional sync for Obsidian vaults**
 
