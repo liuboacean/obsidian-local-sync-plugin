@@ -276,6 +276,21 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       onProgress: (progress) => {
         this.statusBar?.setSyncProgress(progress.completed, progress.total);
       },
+      onFullSyncComplete: (count) => {
+        this.engine.setInitialSyncCount(count);
+        const now = new Date();
+        const timeStr = now.toLocaleString("zh-CN", {
+          year: "numeric", month: "2-digit", day: "2-digit",
+          hour: "2-digit", minute: "2-digit",
+        });
+        this.engine.setLastSyncTime(timeStr);
+        syncLogger.log(
+          LogLevel.SUCCESS,
+          `Initial sync completed: ${count} files synced`,
+          undefined,
+          SyncEventType.SYNC_COMPLETED,
+        );
+      },
     });
 
     // Status Bar
@@ -326,19 +341,11 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       // Request full sync on first connection
       this.initialSync.startFullSync()
         .then(() => {
-          // Update sync stats after initial sync completes
-          const now = new Date();
-          const timeStr = now.toLocaleString("zh-CN", {
-            year: "numeric", month: "2-digit", day: "2-digit",
-            hour: "2-digit", minute: "2-digit",
-          });
-          this.engine.setLastSyncTime(timeStr);
-          this.engine.setInitialSyncCount(this.initialSync.getTransferredCount());
           syncLogger.log(
             LogLevel.SUCCESS,
-            "Initial sync completed, " + this.initialSync.getTransferredCount() + " files synced",
+            "Manifest sent, waiting for remote peer to request files...",
             undefined,
-            SyncEventType.SYNC_COMPLETED,
+            SyncEventType.SYNC_STARTED,
           );
         })
         .catch((err) => {

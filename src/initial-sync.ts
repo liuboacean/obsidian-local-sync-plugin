@@ -64,6 +64,8 @@ interface FullSyncOptions {
   crdtEngine: CrdtEngine;
   osWriter: OsWriter;
   onProgress?: (progress: SyncProgress) => void;
+  /** Called when full initial sync completes (all file transfers done). */
+  onFullSyncComplete?: (totalTransferred: number) => void;
 }
 
 // ============================================================
@@ -492,6 +494,11 @@ export class InitialSyncManager {
         SyncEventType.SYNC_COMPLETED,
       );
       this.emitProgress();
+      // Notify the host that full sync is complete.
+      // If allComplete is set, this is the last ACK batch.
+      if (payload.allComplete) {
+        this.options.onFullSyncComplete?.(this.transferredCount);
+      }
     }
   }
 
