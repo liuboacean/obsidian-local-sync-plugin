@@ -90,12 +90,13 @@ export class LocalSyncSettingTab extends PluginSettingTab {
         case "冲突文件":
           descEl.textContent = String(stats?.conflictedFiles ?? 0);
           break;
-        case "发现设备":
+        case "发现设备": {
           const deviceCount =
             (this.plugin.discoveryMgr?.getDiscoveredDevices()?.length ?? 0) +
             (isConnected ? 1 : 0);
           descEl.textContent = String(deviceCount);
           break;
+        }
       }
     }
   }

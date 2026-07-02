@@ -443,7 +443,7 @@ export class SyncEngine extends EventEmitter {
           payload.hash || "",
           0, // local mtime
           payload.mtime || 0,
-          "MODIFY_VS_MODIFY" as ConflictType,
+          "MODIFY_VS_MODIFY",
         );
 
         if (hasConflict) {
