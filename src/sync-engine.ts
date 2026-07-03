@@ -265,9 +265,12 @@ export class SyncEngine extends EventEmitter {
           change.relativePath,
           SyncEventType.FILE_PUSHED,
         );
-      } else {
-        // CRDT not suitable — fall back to full file sync
-        const msg = createMessage(
+      }
+
+      // Always send full FILE_CHANGE as well — CRDT binary updates are not
+      // processed by the receiver (the binary frame lacks document metadata),
+      // so the FILE_CHANGE text message guarantees the file content arrives.
+      const msg = createMessage(
           MessageType.FILE_CHANGE,
           {
             relativePath: change.relativePath,
@@ -281,7 +284,6 @@ export class SyncEngine extends EventEmitter {
           this.deviceName,
         );
         this.connectionManager!.sendMessage(msg);
-      }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(

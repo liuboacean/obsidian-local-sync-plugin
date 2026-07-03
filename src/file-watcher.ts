@@ -8,6 +8,7 @@
 import { EventEmitter } from "events";
 import * as chokidar from "chokidar";
 import * as path from "path";
+import { stat } from "fs/promises";
 import { FileChange, ChangeType, FileCategory } from "./types";
 import { DEBOUNCE_MS, RECENTLY_PUSHED_TTL_MS, EVENTS } from "./constants";
 import { classifyFile, computeFileHash, normalizePath } from "./utils";
@@ -304,7 +305,6 @@ export class FileWatcher extends EventEmitter {
 
     if (changeType !== ChangeType.DELETE) {
       try {
-        const { stat } = await import("fs/promises");
         const stats = await stat(filePath);
         mtime = stats.mtimeMs;
         size = stats.size;
