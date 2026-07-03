@@ -533,7 +533,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
       .addButton((btn) =>
         btn
           .setButtonText("重置证书")
-          .setDestructive().setCta()
+          .setDestructive()
           .onClick(async () => {
             const confirmed = await this.confirmResetCert();
             if (confirmed) {

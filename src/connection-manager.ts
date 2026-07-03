@@ -7,9 +7,8 @@
 // automatic reconnection with exponential backoff.
 
 import { EventEmitter } from "events";
-// ws conditional exports: esbuild resolves "import" to wrapper.mjs which
-// lacks Server/OPEN/default exports. Use import = require for correct CJS.
-import WebSocket = require("ws");
+// ws via local CJS shim — avoids ESM wrapper.mjs issues
+import WebSocket from "./ws";
 import * as http from "http";
 import * as https from "https";
 import type { TlsOptions } from "./cert-manager";
@@ -329,7 +328,7 @@ export class ConnectionManager extends EventEmitter {
       // For WSS with self-signed certs, pass rejectUnauthorized in options
       const socket = new WebSocket(url, [], {
         rejectUnauthorized: false,
-      } as any);
+      });
 
       socket.on("open", () => {
         debugLog("[ObsSync] Client WebSocket OPEN to", this.targetAddress);
