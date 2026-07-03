@@ -1,9 +1,9 @@
 {
   "id": "local-sync",
   "name": "Local Sync",
-  "version": "1.1.1",
-  "minAppVersion": "1.4.0",
-  "description": "LAN bidirectional vault sync \u2014 CRDT auto-merge, PSK auth, UDP discovery.",
+  "version": "1.1.2",
+  "minAppVersion": "1.5.11",
+  "description": "LAN bidirectional vault sync — CRDT auto-merge, PSK auth, UDP discovery, TLS encryption.",
   "author": "liuboacean",
   "authorUrl": "https://github.com/liuboacean",
   "isDesktopOnly": true

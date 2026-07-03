@@ -530,18 +530,18 @@ export class LocalSyncSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("重置证书")
       .setDesc("重新生成证书，将断开所有现有连接，对端需重新确认指纹")
-      .addButton((btn) =>
+      .addButton((btn) => {
         btn
           .setButtonText("重置证书")
-          .setDestructive()
+          .setCta()
           .onClick(async () => {
             const confirmed = await this.confirmResetCert();
             if (confirmed) {
               await this.plugin.resetCert();
               new Notice("证书已重置，请等待重新连接");
             }
-          }),
-      );
+          });
+      });
 
     // TLS fallback toggle
     new Setting(containerEl)

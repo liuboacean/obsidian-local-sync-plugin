@@ -324,11 +324,9 @@ export class ConnectionManager extends EventEmitter {
     );
 
     try {
-      // ws constructor: new WebSocket(url, protocols?, options?)
-      // For WSS with self-signed certs, pass rejectUnauthorized in options
-      const socket = new WebSocket(url, [], {
-        rejectUnauthorized: false,
-      });
+      // WSS with self-signed certs — connection will fall back to WS
+      // if TLS handshake fails (no rejectUnauthorized for security compliance)
+      const socket = new WebSocket(url);
 
       socket.on("open", () => {
         debugLog("[ObsSync] Client WebSocket OPEN to", this.targetAddress);
