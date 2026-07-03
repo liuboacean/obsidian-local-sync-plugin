@@ -99,6 +99,7 @@ export class DiscoveryManager extends EventEmitter {
   private socket: dgram.Socket | null = null;
   private broadcastTimer: number | null = null;
   private cleanupTimer: number | null = null;
+  private _warnTimeout: number | null = null;
   private running = false;
 
   /** Map of discovered devices. */
@@ -167,6 +168,18 @@ export class DiscoveryManager extends EventEmitter {
         // Start broadcasting presence
         this.startBroadcasting();
         this.startCleanupTimer();
+
+        // Timeout warning: if no devices found after 30s, suggest manual connection
+        this._warnTimeout = window.setTimeout(() => {
+          if (this.devices.size === 0) {
+            syncLogger.log(
+              LogLevel.WARN,
+              "UDP discovery: no devices found on this subnet after 30s. If devices are on a different subnet, use manual IP connection in settings.",
+              undefined,
+              SyncEventType.ERROR,
+            );
+          }
+        }, 30000);
       });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -189,6 +202,11 @@ export class DiscoveryManager extends EventEmitter {
 
     this.stopBroadcasting();
     this.stopCleanupTimer();
+
+    if (this._warnTimeout) {
+      window.clearTimeout(this._warnTimeout);
+      this._warnTimeout = null;
+    }
 
     if (this.socket) {
       try {

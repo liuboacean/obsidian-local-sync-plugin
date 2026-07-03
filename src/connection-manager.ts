@@ -92,7 +92,7 @@ export class ConnectionManager extends EventEmitter {
     this.deviceId = options.deviceId;
     this.deviceName = options.deviceName;
     this.sharedKey = options.sharedKey || "";
-    this.enableTls = options.enableTls ?? true;
+    this.enableTls = options.enableTls ?? false;
     this.tlsOptions = options.tlsOptions || null;
     this.allowTlsFallback = options.allowTlsFallback ?? true;
 
@@ -369,7 +369,6 @@ export class ConnectionManager extends EventEmitter {
         const isTlsError = err.message.includes("cert") || err.message.includes("SSL") || 
                            err.message.includes("TLS") || err.message.includes("CERT") ||
                            err.message.includes("secure") || err.message.includes("DEPTH_ZERO");
-        const isConnRefused = err.message.includes("ECONNREFUSED");
         
         if (this.enableTls && this.allowTlsFallback && isTlsError) {
           debugLog("[ObsSync] TLS WSS connection failed, falling back to WS:", err.message);
@@ -379,8 +378,8 @@ export class ConnectionManager extends EventEmitter {
           return;
         }
 
-        // On ECONNREFUSED (remote peer not ready yet), retry with reconnect
-        if (isConnRefused && this.shouldReconnect) {
+        // On any connection error, retry with reconnect if shouldReconnect is enabled
+        if (this.shouldReconnect) {
           this.scheduleReconnect();
           return;
         }
