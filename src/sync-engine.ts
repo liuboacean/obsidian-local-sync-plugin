@@ -615,7 +615,7 @@ export class SyncEngine extends EventEmitter {
       SyncEventType.CONFLICT_DETECTED,
     );
 
-    this.emit(EVENTS.CONFLICT_DETECTED, payload.relativePath as string);
+    this.emit(EVENTS.CONFLICT_DETECTED, payload.relativePath);
   }
 
   /**
