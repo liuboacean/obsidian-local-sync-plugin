@@ -4,6 +4,7 @@
 // Provides serialization, deserialization, and message creation
 // for the Obsidian Local Sync WebSocket communication layer.
 
+import * as crypto from "crypto";
 import { MessageType, SyncMessage } from "./types";
 
 // ============================================================

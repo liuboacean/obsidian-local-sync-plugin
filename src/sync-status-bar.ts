@@ -20,7 +20,7 @@ export class SyncStatusBar {
   private statusBarEl: HTMLElement | null = null;
 
   /** Current display state. */
-  private connectionStatus: "connected" | "disconnected" | "connecting" =
+  private connectionStatus: "connected" | "disconnected" | "connecting" | "warning" =
     "disconnected";
   private isSyncing = false;
   private deviceCount = 0;
@@ -30,7 +30,7 @@ export class SyncStatusBar {
   private syncProgressTotal = 0;
 
   /** Blink animation interval for syncing state. */
-  private syncingInterval: ReturnType<typeof setInterval> | null = null;
+  private syncingInterval: number | null = null;
 
   constructor(plugin: ObsidianLocalSyncPlugin) {
     this.plugin = plugin;
@@ -57,7 +57,7 @@ export class SyncStatusBar {
    * Update connection status display.
    */
   updateConnectionStatus(
-    status: "connected" | "disconnected" | "connecting",
+    status: "connected" | "disconnected" | "connecting" | "warning",
   ): void {
     this.connectionStatus = status;
     if (status !== "connected") {

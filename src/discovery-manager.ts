@@ -97,8 +97,8 @@ export class DiscoveryManager extends EventEmitter {
   private udpPort: number;
 
   private socket: dgram.Socket | null = null;
-  private broadcastTimer: ReturnType<typeof setInterval> | null = null;
-  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+  private broadcastTimer: number | null = null;
+  private cleanupTimer: number | null = null;
   private running = false;
 
   /** Map of discovered devices. */

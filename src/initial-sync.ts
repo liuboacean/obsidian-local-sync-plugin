@@ -89,7 +89,7 @@ const HASH_TIMEOUT_MS = 5000;
  * timeout expires first.
  */
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | "timeout"> {
-  let timer: ReturnType<typeof window.setTimeout> | undefined;
+  let timer: number | undefined;
   const timeout = new Promise<"timeout">((resolve) => {
     timer = window.setTimeout(() => resolve("timeout"), ms);
   });
@@ -411,8 +411,8 @@ export class InitialSyncManager {
       return { missing: [], different: [] };
     }
 
-    const batchIndex: number = payload.batchIndex;
-    const remoteFiles: ManifestEntry[] = payload.files;
+    const batchIndex: number = payload.batchIndex as number;
+    const remoteFiles: ManifestEntry[] = payload.files as ManifestEntry[];
     debugLog("[ObsSync] handleRemoteBatch batch=" + batchIndex + " files=" + remoteFiles.length);
 
     if (this.receivedBatches.has(batchIndex)) {
@@ -463,7 +463,7 @@ export class InitialSyncManager {
         missing: missing.map((e) => e.relativePath),
         different: different.map((e) => e.relativePath),
         allComplete:
-          this.receivedBatches.size >= (payload.totalBatches || Infinity),
+          this.receivedBatches.size >= ((payload.totalBatches as number) || Infinity),
       },
       this.options.deviceId,
       this.options.deviceName,
@@ -493,8 +493,8 @@ export class InitialSyncManager {
       return;
     }
 
-    const missingPaths: string[] = payload.missing || [];
-    const differentPaths: string[] = payload.different || [];
+    const missingPaths: string[] = (payload.missing as string[]) || [];
+    const differentPaths: string[] = (payload.different as string[]) || [];
 
     // Build map for quick lookup
     const manifestMap = new Map<string, ManifestEntry>();

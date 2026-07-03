@@ -104,4 +104,5 @@ export const EVENTS = {
   TLS_FALLBACK: "tls-fallback",
   TLS_ERROR: "tls-error",
   CERT_RESET: "cert-reset",
+  CERT_FINGERPRINT: "cert-fingerprint",
 } as const;

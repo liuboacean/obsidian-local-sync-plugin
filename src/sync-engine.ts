@@ -396,19 +396,19 @@ export class SyncEngine extends EventEmitter {
       return;
     }
 
-    const relativePath: string = payload.relativePath;
-    const fileCategory: FileCategory = payload.fileCategory || FileCategory.TEXT;
+    const relativePath: string = payload.relativePath as string;
+    const fileCategory: FileCategory = (payload.fileCategory as FileCategory) || FileCategory.TEXT;
 
     try {
       if (fileCategory === FileCategory.TEXT) {
         // TEXT file
-        const content: string = payload.content || "";
+        const content: string = (payload.content as string) || "";
 
         // Check CRDT suitability
         const docId = generateDocId(relativePath);
         if (payload.crdtUpdate) {
           // Apply CRDT update
-          const update = new Uint8Array(Buffer.from(payload.crdtUpdate, "base64"));
+          const update = new Uint8Array(Buffer.from(payload.crdtUpdate as string, "base64"));
           const doc = this.crdtEngine.initDoc(docId, relativePath);
           this.crdtEngine.applyUpdate(doc, update);
           const mergedContent = this.crdtEngine.getTextContent(doc);
@@ -429,7 +429,7 @@ export class SyncEngine extends EventEmitter {
         );
       } else {
         // BINARY file
-        const contentBase64: string = payload.content || "";
+        const contentBase64: string = (payload.content as string) || "";
         const content = Buffer.from(contentBase64, "base64");
 
         // Conflict detection
@@ -439,9 +439,9 @@ export class SyncEngine extends EventEmitter {
         const hasConflict = this.conflictDetector.detect(
           FileCategory.BINARY,
           localHash,
-          payload.hash || "",
+          (payload.hash as string) || "",
           0, // local mtime
-          payload.mtime || 0,
+          (payload.mtime as number) || 0,
           "MODIFY_VS_MODIFY",
         );
 
@@ -462,8 +462,8 @@ export class SyncEngine extends EventEmitter {
             remoteVersion: {
               type: ChangeType.MODIFY,
               relativePath,
-              mtime: payload.mtime || 0,
-              hash: payload.hash || "",
+              mtime: (payload.mtime as number) || 0,
+              hash: (payload.hash as string) || "",
               originDeviceId: msg.deviceId,
               version: 1,
               fileCategory: FileCategory.BINARY,
@@ -511,8 +511,8 @@ export class SyncEngine extends EventEmitter {
       return;
     }
 
-    const docId: string = payload.docId;
-    const updateBase64: string = payload.update;
+    const docId: string = payload.docId as string;
+    const updateBase64: string = payload.update as string;
 
     try {
       const update = new Uint8Array(Buffer.from(updateBase64, "base64"));
@@ -520,7 +520,7 @@ export class SyncEngine extends EventEmitter {
       // Get or create the doc
       let doc = this.crdtEngine.getDoc(docId);
       if (!doc) {
-        doc = this.crdtEngine.initDoc(docId, payload.relativePath || docId);
+        doc = this.crdtEngine.initDoc(docId, (payload.relativePath as string) || docId);
       }
 
       // Apply the update
@@ -531,7 +531,7 @@ export class SyncEngine extends EventEmitter {
 
       // Determine relative path
       const state = this.crdtEngine.getState(docId);
-      const relativePath = (state && state.relativePath) || payload.relativePath || docId;
+      const relativePath = (state && state.relativePath) || (payload.relativePath as string) || docId;
 
       await this.osWriter.writeFile(this.vaultPath, relativePath, mergedContent);
 
@@ -561,8 +561,8 @@ export class SyncEngine extends EventEmitter {
       return;
     }
 
-    const docId: string = payload.docId;
-    const snapshotBase64: string = payload.snapshot || "";
+    const docId: string = payload.docId as string;
+    const snapshotBase64: string = (payload.snapshot as string) || "";
 
     try {
       if (snapshotBase64) {
@@ -570,12 +570,12 @@ export class SyncEngine extends EventEmitter {
         const snapshot = new Uint8Array(Buffer.from(snapshotBase64, "base64"));
         let doc = this.crdtEngine.getDoc(docId);
         if (!doc) {
-          doc = this.crdtEngine.initDoc(docId, payload.relativePath || docId);
+          doc = this.crdtEngine.initDoc(docId, (payload.relativePath as string) || docId);
         }
         this.crdtEngine.applyUpdate(doc, snapshot);
 
         const mergedContent = this.crdtEngine.getTextContent(doc);
-        const relativePath = payload.relativePath || docId;
+        const relativePath = (payload.relativePath as string) || docId;
         await this.osWriter.writeFile(this.vaultPath, relativePath, mergedContent);
       } else {
         // Try restoring from local snapshot
@@ -610,12 +610,12 @@ export class SyncEngine extends EventEmitter {
 
     syncLogger.log(
       LogLevel.WARN,
-      `Conflict notified by peer: ${payload.relativePath}`,
-      payload.relativePath,
+      `Conflict notified by peer: ${payload.relativePath as string}`,
+      payload.relativePath as string,
       SyncEventType.CONFLICT_DETECTED,
     );
 
-    this.emit(EVENTS.CONFLICT_DETECTED, payload.relativePath);
+    this.emit(EVENTS.CONFLICT_DETECTED, payload.relativePath as string);
   }
 
   /**
@@ -628,14 +628,14 @@ export class SyncEngine extends EventEmitter {
     }
 
     this.conflictDetector.resolveConflict(
-      payload.relativePath,
-      payload.resolution,
+      payload.relativePath as string,
+      payload.resolution as "keep_local" | "keep_remote" | "keep_both",
     );
 
     syncLogger.log(
       LogLevel.INFO,
-      `Conflict resolved by peer: ${payload.relativePath} (${payload.resolution})`,
-      payload.relativePath,
+      `Conflict resolved by peer: ${payload.relativePath as string} (${payload.resolution as string})`,
+      payload.relativePath as string,
       SyncEventType.CONFLICT_RESOLVED,
     );
   }

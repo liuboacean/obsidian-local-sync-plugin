@@ -56,6 +56,7 @@ export enum LogLevel {
 }
 
 export enum SyncEventType {
+  INFO = "INFO",
   FILE_PUSHED = "FILE_PUSHED",
   FILE_RECEIVED = "FILE_RECEIVED",
   CONFLICT_DETECTED = "CONFLICT_DETECTED",

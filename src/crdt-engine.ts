@@ -42,10 +42,10 @@ export class CrdtEngine extends EventEmitter {
   private editCounters: Map<string, number> = new Map();
 
   /** Map of docId -> save threshold timer. */
-  private dirtyTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private dirtyTimers: Map<string, number> = new Map();
 
   /** Dirty-flag snapshot interval timer. */
-  private snapshotTimer: ReturnType<typeof setInterval> | null = null;
+  private snapshotTimer: number | null = null;
 
   /** Snapshot directory path (resolved on init). */
   private snapshotDir: string = "";

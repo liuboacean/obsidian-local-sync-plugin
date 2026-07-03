@@ -251,7 +251,8 @@ export const syncLogger = new SyncLogger();
  * This is the primary way to emit diagnostic logs that can be read
  * remotely from the log file at ~/.obsidian-sync/logs/sync.log.
  */
-export function debugLog(message: string): void {
-  console.log(message);
+export function debugLog(...args: unknown[]): void {
+  const message = args.map(String).join(" ");
+  console.log(...args);
   syncLogger.log(LogLevel.DEBUG, message.replace(/^\[Obs(ync|idian Local Sync)] /, ""), undefined, SyncEventType.SYNC_STARTED);
 }

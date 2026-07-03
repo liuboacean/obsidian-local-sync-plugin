@@ -17,6 +17,7 @@ import {
   SyncEventType,
   MessageType,
 } from "./types";
+import { EVENTS } from "./constants";
 import { DEFAULT_SETTINGS } from "./settings";
 import { LocalSyncSettingTab } from "./setting-tab";
 import { ConflictResolverModal, ConflictResolution } from "./conflict-resolver";
@@ -207,7 +208,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       try {
         const result = await this.certManager.getTlsOptions();
         tlsOptions = result;
-      } catch (err) {
+      } catch (err: unknown) {
         syncLogger.log(
           LogLevel.WARN,
           `TLS init failed, using plain WS: ${err}`,
@@ -233,7 +234,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       delete: async (path: string) => {
         const file = this.app.vault.getAbstractFileByPath(path);
         if (file instanceof TFile) {
-          await this.app.vault.delete(file);
+          await this.app.fileManager.trashFile(file);
         }
       },
       rename: async (oldPath: string, newPath: string) => {

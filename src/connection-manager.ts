@@ -71,9 +71,9 @@ export class ConnectionManager extends EventEmitter {
   private isConnected = false;
   private shouldReconnect = false;
   private reconnectAttempts = 0;
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-  private heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
+  private reconnectTimer: number | null = null;
+  private heartbeatTimer: number | null = null;
+  private heartbeatTimeoutTimer: number | null = null;
 
   /** Map of processed message UUIDs for deduplication. */
   private processedMessages: Map<string, boolean> = new Map();

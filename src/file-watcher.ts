@@ -63,14 +63,14 @@ export class FileWatcher extends EventEmitter {
   private ignorePatterns: (string | RegExp)[] = [];
 
   /** Debounce timers: path -> setTimeout handle */
-  private debounceTimers: Map<string, ReturnType<typeof setTimeout>> =
+  private debounceTimers: Map<string, number> =
     new Map();
 
   /** Recently-pushed dedup map: path -> timestamp */
   private recentlyPushed: Map<string, number> = new Map();
 
   /** Periodic cleanup timer for recently-pushed map */
-  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+  private cleanupTimer: number | null = null;
 
   /** Whether the watcher is currently started */
   private watching = false;
