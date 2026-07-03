@@ -249,8 +249,10 @@ export class ConnectionManager extends EventEmitter {
         this.activeSocket = socket;
         this.setupSocketHandlers(socket);
         this.startHeartbeat();
-        this.isConnected = true;
-        this.emit(EVENTS.CONNECTED);
+        // Auth handshake sends the PSK challenge to the client.
+        // isConnected and EVENTS.CONNECTED will be set after auth
+        // completes in handleAuthMessage (lines 634-635).
+        this.initAuthHandshake(socket);
       });
 
       this.server.on("error", (err: Error) => {
@@ -348,12 +350,10 @@ export class ConnectionManager extends EventEmitter {
         this.activeSocket = socket;
         this.setupSocketHandlers(socket);
         this.startHeartbeat();
-        // Don't init auth here — the server sends the challenge.
-        // Emit connected immediately so both sides show status.
-        // Auth validation happens server-side; failures close the socket.
-        this.isConnected = true;
-        this.emit(EVENTS.CONNECTED);
-        debugLog("[ObsSync] Client socket open, connected (awaiting server auth)");
+        // isConnected and EVENTS.CONNECTED will be set after receiving
+        // the server's HANDSHAKE challenge in handleAuthMessage (lines 594-604).
+        // The server initiates the auth handshake; we wait for its challenge.
+        debugLog("[ObsSync] Client socket open, awaiting server auth challenge");
       });
 
       socket.on("error", (err: Error) => {
