@@ -11,6 +11,7 @@
 import * as Y from "yjs";
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import { EventEmitter } from "events";
 import { CrdtSyncState, FileCategory } from "./types";
 import {
@@ -72,7 +73,7 @@ export class CrdtEngine extends EventEmitter {
     }
 
     // Resolve snapshot directory
-    const homeDir = process.env.HOME || process.env.USERPROFILE || ".";
+    const homeDir = os.homedir();
     this.snapshotDir = path.join(homeDir, CRDT_DIR_NAME, CRDT_SUBDIR_NAME);
 
     try {

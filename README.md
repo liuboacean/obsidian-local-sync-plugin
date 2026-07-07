@@ -250,6 +250,17 @@ Client (WSS)                  Server (WSS)
 
 ---
 
+## 🔍 Security & Review Notes
+
+This plugin intentionally uses a few APIs that trigger Obsidian's automated review warnings. Each is required for the plugin's core LAN‑sync function and is scoped as tightly as possible:
+
+- **Direct filesystem access (`fs`)** — *By design.* A sync plugin must read and write the files it synchronizes, which live **outside** the Obsidian vault. Access is limited to (a) the user‑configured sync paths and (b) the plugin's own data directory `~/.obsidian-sync/` (logs, CRDT snapshots, TLS certs). It never touches unrelated files.
+- **System identity (`os.networkInterfaces`, `os.homedir`)** — Used only for LAN peer discovery and to locate the plugin data dir. The plugin does **not** call `os.hostname()` or `os.userInfo()`, and no longer reads identity‑related environment variables (replaced `process.env.HOME/USERPROFILE` with `os.homedir()`). The device identifier is a randomly generated UUID, not derived from machine identity.
+- **`document` → `activeDocument`** — *Fixed.* All DOM creation in the sync‑history view now uses Obsidian's `activeDocument` global for popout‑window compatibility.
+- **`diff` dependency advisory (GHSA‑73rr‑hh4g‑fpgx)** — *Not affected.* The dependency is `diff@^7.0.0` (resolved **7.0.0**); `npm audit` reports **0 vulnerabilities**. The advisory only affects earlier `diff` versions.
+
+---
+
 ## 📊 Project Stats
 
 | Metric | Value |

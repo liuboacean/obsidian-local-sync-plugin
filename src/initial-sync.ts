@@ -14,6 +14,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 import {
   FileCategory,
   MessageType,
@@ -320,7 +321,7 @@ export class InitialSyncManager {
    * Get the manifest file path.
    */
   private getManifestPath(): string {
-    const homeDir = process.env.HOME || process.env.USERPROFILE || ".";
+    const homeDir = os.homedir();
     return path.join(homeDir, MANIFEST_DIR_NAME, MANIFEST_FILE_NAME);
   }
 

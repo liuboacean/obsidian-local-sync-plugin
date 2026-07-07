@@ -7,6 +7,7 @@
 
 import * as path from "path";
 import * as fs from "fs";
+import * as os from "os";
 import { LogLevel, LogEntry, SyncEventType } from "./types";
 import {
   MAX_LOG_ENTRIES,
@@ -28,7 +29,7 @@ const LOG_FILE_EXT = ".log";
  * Resolve the log directory path under the user's home directory.
  */
 function getLogDirPath(): string {
-  const homeDir = process.env.HOME || process.env.USERPROFILE || ".";
+  const homeDir = os.homedir();
   return path.join(homeDir, LOG_DIR_NAME, LOG_SUBDIR_NAME);
 }
 
