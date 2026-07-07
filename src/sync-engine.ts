@@ -21,6 +21,7 @@ import {
   SyncStatus,
   ChangeType,
   ConflictStatus,
+  BeforeSendHook,
 } from "./types";
 import { EVENTS } from "./constants";
 import { computeFileHash, generateDocId } from "./utils";
@@ -92,6 +93,7 @@ export class SyncEngine extends EventEmitter {
   private stats: SyncStats = {
     pendingFiles: 0,
     syncedFiles: 0,
+    vaultFileCount: 0,
     conflictedFiles: 0,
     failedFiles: 0,
     totalBytes: 0,
@@ -105,6 +107,13 @@ export class SyncEngine extends EventEmitter {
 
   /** Whether the engine is running. */
   private running = false;
+
+  /**
+   * Optional hook invoked before a local change is transmitted.
+   * Registered by DiffPreviewService. When set, the handler decides
+   * whether the send proceeds (true) or is skipped (false).
+   */
+  beforeSendHook: BeforeSendHook | null = null;
 
   constructor(
     fileWatcher: FileWatcher,
@@ -146,6 +155,14 @@ export class SyncEngine extends EventEmitter {
   }
 
   /**
+   * Register the before-send hook (e.g. Diff Preview).
+   * Passing null clears any previously registered hook.
+   */
+  setBeforeSendHook(hook: BeforeSendHook | null): void {
+    this.beforeSendHook = hook;
+  }
+
+  /**
    * Start the sync engine.
    * Binds to file watcher events and connection manager events.
    */
@@ -158,23 +175,23 @@ export class SyncEngine extends EventEmitter {
     // Bind file watcher events
     this.fileWatcher.on(EVENTS.FILE_CREATED, (change: FileChange) => {
       this.handleLocalChange(change).catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `handleLocalChange (CREATE) error: ${err}`, change.relativePath, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `本地变更处理（创建）出错：${err}`, change.relativePath, SyncEventType.ERROR);
       });
     });
 
     this.fileWatcher.on(EVENTS.FILE_MODIFIED, (change: FileChange) => {
       this.handleLocalChange(change).catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `handleLocalChange (MODIFY) error: ${err}`, change.relativePath, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `本地变更处理（修改）出错：${err}`, change.relativePath, SyncEventType.ERROR);
       });
     });
 
     this.fileWatcher.on(EVENTS.FILE_DELETED, (change: FileChange) => {
       this.handleLocalChange(change).catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `handleLocalChange (DELETE) error: ${err}`, change.relativePath, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `本地变更处理（删除）出错：${err}`, change.relativePath, SyncEventType.ERROR);
       });
     });
 
-    syncLogger.log(LogLevel.INFO, "Sync engine started", undefined, SyncEventType.SYNC_STARTED);
+    syncLogger.log(LogLevel.INFO, "同步引擎已启动", undefined, SyncEventType.SYNC_STARTED);
   }
 
   /**
@@ -185,7 +202,7 @@ export class SyncEngine extends EventEmitter {
       return;
     }
     this.running = false;
-    syncLogger.log(LogLevel.INFO, "Sync engine stopped", undefined, SyncEventType.DISCONNECTED);
+    syncLogger.log(LogLevel.INFO, "同步引擎已停止", undefined, SyncEventType.DISCONNECTED);
   }
 
   // ============================================================
@@ -217,7 +234,7 @@ export class SyncEngine extends EventEmitter {
       this.stats.pendingFiles = this.pendingQueue.size();
       syncLogger.log(
         LogLevel.INFO,
-        `Queued local change (offline): ${change.relativePath}`,
+        `已排队本地变更（离线）：${change.relativePath}`,
         change.relativePath,
         SyncEventType.SYNC_STARTED,
       );
@@ -226,6 +243,28 @@ export class SyncEngine extends EventEmitter {
 
     // Set origin device ID
     change.originDeviceId = this.deviceId;
+
+    // Diff Preview hook — only reached while connected (offline changes
+    // are enqueued and returned above). The hook may pause the send to
+    // ask the user for confirmation before transmitting.
+    if (this.beforeSendHook) {
+      const proceed = await this.beforeSendHook.handler(
+        change,
+        this.vaultPath,
+      );
+      if (!proceed) {
+        syncLogger.log(
+          LogLevel.INFO,
+          `变更被差异预览跳过：${change.relativePath}`,
+        );
+        return;
+      }
+    }
+
+    if (change.type === ChangeType.DELETE) {
+      await this.handleLocalDeleteChange(change);
+      return;
+    }
 
     if (change.fileCategory === FileCategory.TEXT) {
       await this.handleLocalTextChange(change);
@@ -261,7 +300,7 @@ export class SyncEngine extends EventEmitter {
 
         syncLogger.log(
           LogLevel.DEBUG,
-          `CRDT update sent: ${change.relativePath}`,
+          `CRDT 更新已发送：${change.relativePath}`,
           change.relativePath,
           SyncEventType.FILE_PUSHED,
         );
@@ -288,7 +327,7 @@ export class SyncEngine extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to handle local TEXT change: ${errorMessage}`,
+        `处理本地文本变更失败：${errorMessage}`,
         change.relativePath,
         SyncEventType.ERROR,
       );
@@ -325,7 +364,7 @@ export class SyncEngine extends EventEmitter {
 
       syncLogger.log(
         LogLevel.DEBUG,
-        `Binary file sent: ${change.relativePath} (${fileSize} bytes)`,
+        `二进制文件已发送：${change.relativePath} (${fileSize} bytes)`,
         change.relativePath,
         SyncEventType.FILE_PUSHED,
       );
@@ -333,7 +372,65 @@ export class SyncEngine extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to handle local BINARY change: ${errorMessage}`,
+        `处理本地二进制变更失败：${errorMessage}`,
+        change.relativePath,
+        SyncEventType.ERROR,
+      );
+      this.stats.failedFiles++;
+    }
+  }
+
+  /**
+   * Handle a local file deletion.
+   *
+   * The deleted file no longer exists on disk, so we MUST NOT read it
+   * (that would throw ENOENT and silently drop the deletion). Instead we
+   * emit a FILE_DELETE control message so the remote peer can delete its
+   * copy and destroy the corresponding CRDT document.
+   *
+   * For TEXT files we additionally send a CRDT "delete to empty" update
+   * (initDoc → setTextContent("") → generateUpdate → sendBinary) so the
+   * remote doc converges to empty before it is destroyed.
+   */
+  private async handleLocalDeleteChange(change: FileChange): Promise<void> {
+    try {
+      const relativePath: string = change.relativePath;
+
+      if (change.fileCategory === FileCategory.TEXT) {
+        // Send a CRDT update that empties the document on the remote side.
+        const docId: string = generateDocId(relativePath);
+        const doc = this.crdtEngine.initDoc(docId, relativePath);
+        this.crdtEngine.setTextContent(doc, "");
+        const update = this.crdtEngine.generateUpdate(doc);
+        this.connectionManager!.sendBinary(update);
+      }
+
+      // Control message instructing the peer to delete the file.
+      const msg = createMessage(
+        MessageType.FILE_DELETE,
+        {
+          relativePath,
+          fileCategory: change.fileCategory,
+        },
+        this.deviceId,
+        this.deviceName,
+      );
+      this.connectionManager!.sendMessage(msg);
+
+      this.stats.syncedFiles++;
+      this.stats.lastSyncTime = new Date().toISOString();
+
+      syncLogger.log(
+        LogLevel.SUCCESS,
+        `文件删除已发送：${relativePath}`,
+        relativePath,
+        SyncEventType.FILE_PUSHED,
+      );
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      syncLogger.log(
+        LogLevel.ERROR,
+        `处理本地删除变更失败：${errorMessage}`,
         change.relativePath,
         SyncEventType.ERROR,
       );
@@ -352,6 +449,10 @@ export class SyncEngine extends EventEmitter {
   async handleRemoteMessage(msg: SyncMessage): Promise<void> {
     switch (msg.type) {
       case MessageType.FILE_CHANGE:
+        await this.handleRemoteFileChange(msg);
+        break;
+
+      case MessageType.FILE_DELETE:
         await this.handleRemoteFileChange(msg);
         break;
 
@@ -382,7 +483,7 @@ export class SyncEngine extends EventEmitter {
       default:
         syncLogger.log(
           LogLevel.DEBUG,
-          `Unhandled message type: ${msg.type}`,
+          `未处理的消息类型：${msg.type}`,
           undefined,
           SyncEventType.ERROR,
         );
@@ -400,6 +501,22 @@ export class SyncEngine extends EventEmitter {
 
     const relativePath: string = payload.relativePath as string;
     const fileCategory: FileCategory = (payload.fileCategory as FileCategory) || FileCategory.TEXT;
+
+    // Consume a remote deletion (FILE_DELETE control message). The peer
+    // already removed its file, so we delete locally and destroy the CRDT
+    // document to avoid an orphaned/empty doc.
+    if (msg.type === MessageType.FILE_DELETE) {
+      await this.osWriter.deleteFile(this.vaultPath, relativePath);
+      this.crdtEngine.destroyDoc(generateDocId(relativePath));
+      syncLogger.log(
+        LogLevel.SUCCESS,
+        `已删除远程文件：${relativePath}`,
+        relativePath,
+        SyncEventType.FILE_RECEIVED,
+      );
+      this.stats.syncedFiles++;
+      return;
+    }
 
     try {
       if (fileCategory === FileCategory.TEXT) {
@@ -425,7 +542,7 @@ export class SyncEngine extends EventEmitter {
 
         syncLogger.log(
           LogLevel.SUCCESS,
-          `File received (TEXT): ${relativePath}`,
+          `已接收文本文件：${relativePath}`,
           relativePath,
           SyncEventType.FILE_RECEIVED,
         );
@@ -483,7 +600,7 @@ export class SyncEngine extends EventEmitter {
           await this.osWriter.writeFile(this.vaultPath, relativePath, content);
           syncLogger.log(
             LogLevel.SUCCESS,
-            `File received (BINARY): ${relativePath}`,
+            `已接收二进制文件：${relativePath}`,
             relativePath,
             SyncEventType.FILE_RECEIVED,
           );
@@ -496,7 +613,7 @@ export class SyncEngine extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to handle remote file change: ${errorMessage}`,
+        `处理远端文件变更失败：${errorMessage}`,
         relativePath,
         SyncEventType.ERROR,
       );
@@ -539,7 +656,7 @@ export class SyncEngine extends EventEmitter {
 
       syncLogger.log(
         LogLevel.DEBUG,
-        `CRDT update applied: ${relativePath}`,
+        `CRDT 更新已应用: ${relativePath}`,
         relativePath,
         SyncEventType.CRDT_MERGED,
       );
@@ -547,7 +664,7 @@ export class SyncEngine extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to apply CRDT update: ${errorMessage}`,
+        `应用 CRDT 更新失败：${errorMessage}`,
         docId,
         SyncEventType.ERROR,
       );
@@ -586,7 +703,7 @@ export class SyncEngine extends EventEmitter {
 
       syncLogger.log(
         LogLevel.SUCCESS,
-        `Full CRDT sync applied: ${docId}`,
+        `完整 CRDT 同步已应用：${docId}`,
         docId,
         SyncEventType.CRDT_MERGED,
       );
@@ -594,7 +711,7 @@ export class SyncEngine extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to apply full CRDT sync: ${errorMessage}`,
+        `应用完整 CRDT 同步失败：${errorMessage}`,
         docId,
         SyncEventType.ERROR,
       );
@@ -612,7 +729,7 @@ export class SyncEngine extends EventEmitter {
 
     syncLogger.log(
       LogLevel.WARN,
-      `Conflict notified by peer: ${payload.relativePath as string}`,
+      `对端通知冲突：${payload.relativePath as string}`,
       payload.relativePath as string,
       SyncEventType.CONFLICT_DETECTED,
     );
@@ -636,7 +753,7 @@ export class SyncEngine extends EventEmitter {
 
     syncLogger.log(
       LogLevel.INFO,
-      `Conflict resolved by peer: ${payload.relativePath as string} (${payload.resolution as string})`,
+      `对端已解决冲突：${payload.relativePath as string} (${payload.resolution as string})`,
       payload.relativePath as string,
       SyncEventType.CONFLICT_RESOLVED,
     );
@@ -664,7 +781,7 @@ export class SyncEngine extends EventEmitter {
 
     this.connectionManager.sendMessage(msg);
 
-    syncLogger.log(LogLevel.INFO, "Full sync requested", undefined, SyncEventType.SYNC_STARTED);
+    syncLogger.log(LogLevel.INFO, "已请求全量同步", undefined, SyncEventType.SYNC_STARTED);
   }
 
   // ============================================================
@@ -672,7 +789,7 @@ export class SyncEngine extends EventEmitter {
   // ============================================================
 
   /**
-   * Flush all pending changes from the queue (called on reconnection).
+   * Flush all 待发变更 from the queue (called on reconnection).
    */
   async flushPendingQueue(): Promise<void> {
     if (this.pendingQueue.size() === 0) {
@@ -681,7 +798,7 @@ export class SyncEngine extends EventEmitter {
 
     syncLogger.log(
       LogLevel.INFO,
-      `Flushing ${this.pendingQueue.size()} pending changes`,
+      `正在刷新 ${this.pendingQueue.size()} 待发变更`,
       undefined,
       SyncEventType.SYNC_STARTED,
     );
@@ -792,14 +909,20 @@ export class SyncEngine extends EventEmitter {
   getSyncStats(): SyncStats {
     this.stats.pendingFiles = this.pendingQueue.size();
 
-    // Count synced files
-    let syncedCount = 0;
+    // Count conflicted/failed files from the live file-state map.
+    //
+    // NOTE on `syncedFiles`: it is sourced from the cumulative
+    // `this.stats.syncedFiles` counter, which is incremented on every
+    // successful push (handleLocalChange) and pull (handleRemoteFileChange)
+    // and seeded with the full-sync baseline in setInitialSyncCount().
+    // We deliberately do NOT recompute it from `vaultFileCount` /
+    // `initialSyncFileCount` / fileStates here — that would discard the
+    // runtime increments and make the settings panel ("已同步文件") show 0
+    // whenever a full sync has not completed in the current session.
     let conflictedCount = 0;
     let failedCount = 0;
     for (const state of this.fileStates.values()) {
-      if (state.status === SyncStatus.SYNCED) {
-        syncedCount++;
-      } else if (state.status === SyncStatus.CONFLICTED) {
+      if (state.status === SyncStatus.CONFLICTED) {
         conflictedCount++;
       } else if (state.status === SyncStatus.FAILED) {
         failedCount++;
@@ -808,7 +931,8 @@ export class SyncEngine extends EventEmitter {
 
     return {
       ...this.stats,
-      syncedFiles: this.vaultFileCount > 0 ? this.vaultFileCount : syncedCount + this.initialSyncFileCount,
+      syncedFiles: this.stats.syncedFiles,
+      vaultFileCount: this.vaultFileCount,
       conflictedFiles: conflictedCount,
       failedFiles: failedCount,
     };
@@ -837,9 +961,17 @@ export class SyncEngine extends EventEmitter {
   }
 
   /**
-   * Set the count of files transferred during initial full sync.
+   * Set the count of 个文件已传输 during the initial full sync.
+   *
+   * As a side effect this seeds the cumulative "synced files" counter
+   * (`this.stats.syncedFiles`) with the full-sync baseline, so the settings
+   * panel ("已同步文件") reflects a meaningful total (the number of files the
+   * full sync actually moved) even before any incremental push/pull occurs,
+   * and the value survives restarts (the full sync re-runs on each load).
+   * Math.max keeps any increments already accumulated through live syncs.
    */
   setInitialSyncCount(count: number): void {
     this.initialSyncFileCount = count;
+    this.stats.syncedFiles = Math.max(this.stats.syncedFiles, count);
   }
 }

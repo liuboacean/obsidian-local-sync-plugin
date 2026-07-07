@@ -7,8 +7,8 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
   <a href="https://obsidian.md"><img src="https://img.shields.io/badge/Obsidian-Plugin-7C3AED?logo=obsidian" alt="Obsidian Plugin"></a>
-  <img src="https://img.shields.io/badge/version-1.1.0-blue" alt="Version">
-  <img src="https://img.shields.io/badge/tests-148%2F148-brightgreen" alt="Tests">
+  <img src="https://img.shields.io/badge/version-1.2.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/tests-239%2F239-brightgreen" alt="Tests">
   <img src="https://img.shields.io/badge/dependencies-3-brightgreen" alt="Dependencies">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome">
 </p>
@@ -241,18 +241,27 @@ Client (WSS)                  Server (WSS)
 
 ---
 
+## 🆕 What's New in v1.2.0
+
+- **🔍 Sync History Viewer — Category Filters**: Filter the sync log by log level (Debug / Info / Success / Warning / Error) and by event type (file pushed / connected / sync completed …). Combines with existing path, date, and quick filters via **AND**.
+- **🌐 Full Log Localization (incl. DEBUG)**: All log levels are now Chinese, including the previously‑English DEBUG diagnostics (32 `debugLog` calls translated). Technical tokens (WS / WSS / TLS / UDP / CRDT / port / deviceId) and prefixes (`[ObsSync]` / `[Obsidian Local Sync]`) are preserved.
+- **📝 Diff Preview**: Preview text/Markdown differences before they sync, powered by `diff-preview-modal.ts` + `diff-preview-service.ts`.
+- **📈 Quality**: Build & type‑check clean; test suite grows to **239 passing** (incl. 10 new filter unit tests). Zero breaking changes; `minAppVersion` stays 1.6.6.
+
+---
+
 ## 📊 Project Stats
 
 | Metric | Value |
 |--------|-------|
-| 📁 Source Files | **20** `.ts` files, ~7,800 lines |
-| 🧪 Tests | **148** passing (unit + integration + E2E) |
+| 📁 Source Files | **26** `.ts` files, ~9,900 lines |
+| 🧪 Tests | **239** passing (unit + integration + E2E) |
 | ⏱️ Test Duration | ~1 second |
-| 📦 Build Output | Single `main.js` (~552KB) |
+| 📦 Build Output | Single `main.js` (~620KB) |
 | 🔗 External Deps | `ws` · `chokidar` · `yjs` (all bundled) |
 | 🖥️ Platforms | macOS ✅ · Linux ✅ · Windows ✅ |
 | 🔒 TLS Deps | **Zero** (all Node.js built‑in) |
-| 🏷️ Latest | **v1.1.0** — TLS encryption |
+| 🏷️ Latest | **v1.2.0** — Sync history filters, log i18n, diff preview |
 
 ---
 
@@ -265,7 +274,7 @@ cd obsidian-local-sync-plugin
 npm install
 npm run build     # Production build (main.js)
 npm run dev       # Watch mode (for Hot Reload plugin)
-npm test          # Run all 148 tests
+npm test          # Run all 239 tests
 
 # Quick local test with two vaults:
 cp main.js manifest.json styles.css /path/to/vault-a/.obsidian/plugins/local-sync/
@@ -279,6 +288,7 @@ cp main.js manifest.json styles.css /path/to/vault-b/.obsidian/plugins/local-syn
 
 | Version | Date | Highlights |
 |:-------:|:----:|-----------|
+| **1.2.0** | Jul 7, 2026 | ✅ Sync history viewer with category filters, full DEBUG log i18n, diff preview, 239 tests |
 | **1.1.0** | Jul 2, 2026 | ✅ TLS encryption (WSS), ECDSA P‑256 certs, 148 tests |
 | 1.0.9 | Jul 2, 2026 | Obsidian community review fixes |
 | 1.0.8 | Jul 2, 2026 | Release format fix |
@@ -294,8 +304,8 @@ cp main.js manifest.json styles.css /path/to/vault-b/.obsidian/plugins/local-syn
 - [x] Cross‑platform file writer
 - [x] **TLS encryption (WSS)** ← v1.1.0
 - [ ] Mobile client support (P2)
-- [ ] Sync history viewer (P2)
-- [ ] Diff preview before sync (P2)
+- [x] Sync history viewer (P2)
+- [x] Diff preview before sync (P2)
 
 ---
 

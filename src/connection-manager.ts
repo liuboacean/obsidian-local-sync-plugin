@@ -150,7 +150,7 @@ export class ConnectionManager extends EventEmitter {
 
     syncLogger.log(
       LogLevel.INFO,
-      `ConnectionManager starting in ${this.mode} mode on port ${this.port}`,
+      `连接管理器启动（${this.mode} 模式，端口 ${this.port}`,
       undefined,
       SyncEventType.SYNC_STARTED,
     );
@@ -161,14 +161,14 @@ export class ConnectionManager extends EventEmitter {
       if (!this.server) {
         await this.startServer();
       } else {
-        debugLog("[ObsSync] Server already running, skipping duplicate start");
+        debugLog("[ObsSync] 服务已在运行，跳过重复启动");
       }
     }
 
     if (this.mode === SyncMode.CLIENT || this.mode === SyncMode.DUPLEX) {
       // Don't start client connection if target address is not set
       if (!this.targetAddress) {
-        debugLog("[ObsSync] No target address configured, skipping client connection");
+        debugLog("[ObsSync] 未配置目标地址，跳过客户端连接");
         return;
       }
       this.startClientConnection();
@@ -191,7 +191,7 @@ export class ConnectionManager extends EventEmitter {
 
     syncLogger.log(
       LogLevel.INFO,
-      "ConnectionManager stopped",
+      "连接管理器已停止",
       undefined,
       SyncEventType.DISCONNECTED,
     );
@@ -213,7 +213,7 @@ export class ConnectionManager extends EventEmitter {
    * Public so main.ts can auto-start it in onload().
    */
   async startServer(): Promise<void> {
-    debugLog("[ObsSync] startServer() port:", this.port);
+    debugLog("[ObsSync] startServer() 端口:", this.port);
     try {
       if (this.enableTls && this.tlsOptions?.isReady) {
         // WSS server with TLS
@@ -226,7 +226,7 @@ export class ConnectionManager extends EventEmitter {
           maxPayload: 100 * 1024 * 1024, // 100 MB
         });
         this.httpServer.listen(this.port);
-        debugLog("[ObsSync] WSS Server starting with TLS on port", this.port);
+        debugLog("[ObsSync] WSS 服务端正在启用 TLS，端口", this.port);
       } else {
         // Plain WS server
         this.httpServer = http.createServer();
@@ -235,13 +235,13 @@ export class ConnectionManager extends EventEmitter {
           maxPayload: 100 * 1024 * 1024, // 100 MB
         });
         this.httpServer.listen(this.port);
-        debugLog("[ObsSync] WS Server starting (plain) on port", this.port);
+        debugLog("[ObsSync] WS 服务端正在启动（明文），端口", this.port);
       }
 
       this.server.on("connection", (socket: WebSocket) => {
         syncLogger.log(
           LogLevel.INFO,
-          "Incoming connection established",
+          "入站连接已建立",
           undefined,
           SyncEventType.CONNECTED,
         );
@@ -256,10 +256,10 @@ export class ConnectionManager extends EventEmitter {
       });
 
       this.server.on("error", (err: Error) => {
-        debugLog("[ObsSync] Server ERROR: " + err.message);
+        debugLog("[ObsSync] 服务端错误: " + err.message);
         syncLogger.log(
           LogLevel.ERROR,
-          `Server error: ${err.message}`,
+          `服务端错误：${err.message}`,
           undefined,
           SyncEventType.ERROR,
         );
@@ -267,10 +267,10 @@ export class ConnectionManager extends EventEmitter {
       });
 
       this.server.on("listening", () => {
-        debugLog("[ObsSync] Server LISTENING on port", this.port);
+        debugLog("[ObsSync] 服务端正在监听，端口", this.port);
         syncLogger.log(
           LogLevel.SUCCESS,
-          `Server listening on port ${this.port}`,
+          `服务端已在端口 ${this.port}`,
           undefined,
           SyncEventType.CONNECTED,
         );
@@ -278,16 +278,16 @@ export class ConnectionManager extends EventEmitter {
 
       syncLogger.log(
         LogLevel.INFO,
-        `Starting server on port ${this.port}`,
+        `正在启动服务端，端口 ${this.port}`,
         undefined,
         SyncEventType.SYNC_STARTED,
       );
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);
-      debugLog("[ObsSync] startServer() CATCH: " + errorMessage);
+      debugLog("[ObsSync] startServer() 捕获异常: " + errorMessage);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to start server: ${errorMessage}`,
+        `启动服务端失败：${errorMessage}`,
         undefined,
         SyncEventType.ERROR,
       );
@@ -317,10 +317,10 @@ export class ConnectionManager extends EventEmitter {
 
     const protocol = this.enableTls ? "wss" : "ws";
     const url = `${protocol}://${this.targetAddress}:${this.port}`;
-    debugLog("[ObsSync] Connecting to:", url, "mode:", this.mode, "isConnected:", this.isConnected);
+    debugLog("[ObsSync] 正在连接到:", url, "mode:", this.mode, "isConnected:", this.isConnected);
     syncLogger.log(
       LogLevel.INFO,
-      `Connecting to ${url}`,
+      `正在连接 ${url}`,
       undefined,
       SyncEventType.SYNC_STARTED,
     );
@@ -331,17 +331,17 @@ export class ConnectionManager extends EventEmitter {
       const socket = new WebSocket(url);
 
       socket.on("open", () => {
-        debugLog("[ObsSync] Client WebSocket OPEN to", this.targetAddress);
+        debugLog("[ObsSync] 客户端 WebSocket 已打开，目标", this.targetAddress);
         syncLogger.log(
           LogLevel.SUCCESS,
-          `Connected to ${this.targetAddress}:${this.port}`,
+          `已连接到 ${this.targetAddress}:${this.port}`,
           undefined,
           SyncEventType.CONNECTED,
         );
 
         // If already connected via server, use this new socket (fresh) instead
         if (this.isConnected && this.mode === SyncMode.DUPLEX) {
-          debugLog("[ObsSync] Already connected via server, replacing with client socket");
+          debugLog("[ObsSync] 已通过服务端连接，改用客户端套接字");
           this.isConnected = false;
         }
 
@@ -353,13 +353,13 @@ export class ConnectionManager extends EventEmitter {
         // isConnected and EVENTS.CONNECTED will be set after receiving
         // the server's HANDSHAKE challenge in handleAuthMessage (lines 594-604).
         // The server initiates the auth handshake; we wait for its challenge.
-        debugLog("[ObsSync] Client socket open, awaiting server auth challenge");
+        debugLog("[ObsSync] 客户端套接字已打开，等待服务端认证质询");
       });
 
       socket.on("error", (err: Error) => {
         syncLogger.log(
           LogLevel.WARN,
-          `Client connection error: ${err.message}`,
+          `客户端连接错误：${err.message}`,
           undefined,
           SyncEventType.ERROR,
         );
@@ -371,7 +371,7 @@ export class ConnectionManager extends EventEmitter {
                            err.message.includes("secure") || err.message.includes("DEPTH_ZERO");
         
         if (this.enableTls && this.allowTlsFallback && isTlsError) {
-          debugLog("[ObsSync] TLS WSS connection failed, falling back to WS:", err.message);
+          debugLog("[ObsSync] TLS WSS 连接失败，回退到 WS:", err.message);
           this.enableTls = false;
           this.emit(EVENTS.TLS_FALLBACK);
           this.scheduleReconnect();
@@ -401,7 +401,7 @@ export class ConnectionManager extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.WARN,
-        `Failed to create client connection: ${errorMessage}`,
+        `创建客户端连接失败：${errorMessage}`,
         undefined,
         SyncEventType.ERROR,
       );
@@ -428,7 +428,7 @@ export class ConnectionManager extends EventEmitter {
     socket.on("error", (err: Error) => {
       syncLogger.log(
         LogLevel.ERROR,
-        `Socket error: ${err.message}`,
+        `套接字错误：${err.message}`,
         undefined,
         SyncEventType.ERROR,
       );
@@ -496,7 +496,7 @@ export class ConnectionManager extends EventEmitter {
 
     // Skip messages with undefined type (likely control frames or bad parse)
     if (!message.type) {
-      debugLog("[ObsSync] Skipping message with undefined type");
+      debugLog("[ObsSync] 跳过类型未定义的消息");
       return;
     }
 
@@ -593,10 +593,10 @@ export class ConnectionManager extends EventEmitter {
       this.activeSocket = socket;
       this.isConnected = true;
       this.startHeartbeat();
-      debugLog("[ObsSync] Client responded to server auth challenge, connected");
+      debugLog("[ObsSync] 客户端已响应服务端认证质询，已连接");
       syncLogger.log(
         LogLevel.SUCCESS,
-        `Authenticated with peer: ${message.deviceName} (${message.deviceId})`,
+        `已通过了对端认证：${message.deviceName} (${message.deviceId})`,
         undefined,
         SyncEventType.CONNECTED,
       );
@@ -626,7 +626,7 @@ export class ConnectionManager extends EventEmitter {
         if (isValid) {
           syncLogger.log(
             LogLevel.SUCCESS,
-            `Peer authenticated: ${message.deviceName} (${message.deviceId})`,
+            `对端已通过认证: ${message.deviceName} (${message.deviceId})`,
             undefined,
             SyncEventType.CONNECTED,
           );
@@ -635,7 +635,7 @@ export class ConnectionManager extends EventEmitter {
         } else {
           syncLogger.log(
             LogLevel.WARN,
-            `Authentication failed for ${message.deviceName}`,
+            `认证失败（对端）：${message.deviceName}`,
             undefined,
             SyncEventType.ERROR,
           );
@@ -693,11 +693,11 @@ export class ConnectionManager extends EventEmitter {
    */
   private handleCertFingerprintAck(message: SyncMessage): void {
     const accepted = message.payload?.accepted as boolean | undefined;
-    debugLog("[ObsSync] Cert fingerprint ack received, accepted:", accepted);
+    debugLog("[ObsSync] 证书指纹 ack 已收到，accepted:", accepted);
     if (!accepted) {
       syncLogger.log(
         LogLevel.WARN,
-        "Remote peer rejected our certificate fingerprint",
+        "远端拒绝了我们的证书指纹",
         undefined,
         SyncEventType.ERROR,
       );
@@ -711,7 +711,7 @@ export class ConnectionManager extends EventEmitter {
     const reason = message.payload?.reason as string | undefined;
     syncLogger.log(
       LogLevel.WARN,
-      `Remote peer fell back to plain WS: ${reason || "unknown reason"}`,
+      `远端回退到明文 WS：${reason || "未知原因"}`,
       undefined,
       SyncEventType.ERROR,
     );
@@ -735,7 +735,7 @@ export class ConnectionManager extends EventEmitter {
     if (!this.activeSocket || !this.isConnected) {
       syncLogger.log(
         LogLevel.WARN,
-        "Cannot send message: not connected",
+        "无法发送消息：未连接",
         undefined,
         SyncEventType.ERROR,
       );
@@ -752,7 +752,7 @@ export class ConnectionManager extends EventEmitter {
     if (!this.activeSocket || !this.isConnected) {
       syncLogger.log(
         LogLevel.WARN,
-        "Cannot send binary: not connected",
+        "无法发送二进制：未连接",
         undefined,
         SyncEventType.ERROR,
       );
@@ -765,7 +765,7 @@ export class ConnectionManager extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to send binary: ${errorMessage}`,
+        `发送二进制失败：${errorMessage}`,
         undefined,
         SyncEventType.ERROR,
       );
@@ -783,7 +783,7 @@ export class ConnectionManager extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to send message: ${errorMessage}`,
+        `发送消息失败：${errorMessage}`,
         undefined,
         SyncEventType.ERROR,
       );
@@ -819,7 +819,7 @@ export class ConnectionManager extends EventEmitter {
         this.heartbeatTimeoutTimer = window.setTimeout(() => {
           syncLogger.log(
             LogLevel.WARN,
-            "Heartbeat timeout — no pong received",
+            "心跳超时——未收到 pong 响应",
             undefined,
             SyncEventType.DISCONNECTED,
           );
@@ -906,7 +906,7 @@ export class ConnectionManager extends EventEmitter {
 
     syncLogger.log(
       LogLevel.INFO,
-      `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`,
+      `将在 ${delay} 毫秒后重连（第 ${this.reconnectAttempts})`,
       undefined,
       SyncEventType.DISCONNECTED,
     );

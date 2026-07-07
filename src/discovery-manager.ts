@@ -142,7 +142,7 @@ export class DiscoveryManager extends EventEmitter {
       this.socket.on("error", (err: Error) => {
         syncLogger.log(
           LogLevel.ERROR,
-          `UDP discovery error: ${err.message}`,
+          `UDP 发现出错：${err.message}`,
           undefined,
           SyncEventType.ERROR,
         );
@@ -157,7 +157,7 @@ export class DiscoveryManager extends EventEmitter {
           }
           syncLogger.log(
             LogLevel.INFO,
-            `UDP discovery listening on port ${bindPort}`,
+            `UDP 发现正在监听端口 ${bindPort}`,
             undefined,
             SyncEventType.SYNC_STARTED,
           );
@@ -174,7 +174,7 @@ export class DiscoveryManager extends EventEmitter {
           if (this.devices.size === 0) {
             syncLogger.log(
               LogLevel.WARN,
-              "UDP discovery: no devices found on this subnet after 30s. If devices are on a different subnet, use manual IP connection in settings.",
+              "UDP 发现：30 秒后此子网未找到设备。若设备在其他子网，请在设置中使用手动 IP 连接。",
               undefined,
               SyncEventType.ERROR,
             );
@@ -185,7 +185,7 @@ export class DiscoveryManager extends EventEmitter {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to start UDP discovery: ${errorMessage}`,
+        `启动 UDP 发现失败：${errorMessage}`,
         undefined,
         SyncEventType.ERROR,
       );
@@ -219,7 +219,7 @@ export class DiscoveryManager extends EventEmitter {
 
     syncLogger.log(
       LogLevel.INFO,
-      "UDP discovery stopped",
+      "UDP 发现已停止",
       undefined,
       SyncEventType.DISCONNECTED,
     );
@@ -363,7 +363,7 @@ export class DiscoveryManager extends EventEmitter {
 
       syncLogger.log(
         LogLevel.SUCCESS,
-        `Device discovered: ${parsed.deviceName} (${parsed.deviceId}) at ${rinfo.address}:${parsed.port}`,
+        `已发现设备: ${parsed.deviceName} (${parsed.deviceId}) at ${rinfo.address}:${parsed.port}`,
         undefined,
         SyncEventType.DEVICE_DISCOVERED,
       );
@@ -440,7 +440,7 @@ export class DiscoveryManager extends EventEmitter {
 
         syncLogger.log(
           LogLevel.WARN,
-          `Device lost: ${device.deviceName} (${deviceId})`,
+          `设备已丢失: ${device.deviceName} (${deviceId})`,
           undefined,
           SyncEventType.DEVICE_LOST,
         );

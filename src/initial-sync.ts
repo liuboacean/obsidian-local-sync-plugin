@@ -63,9 +63,14 @@ interface FullSyncOptions {
   osWriter: OsWriter;
   onProgress?: (progress: SyncProgress) => void;
   /** Called when full initial sync completes (all file transfers done).
-   * @param totalTransferred - Number of files transferred this sync
+   * @param totalTransferred - Number of 个文件已传输 this sync
    * @param vaultFileCount - Total number of files in local vault manifest */
   onFullSyncComplete?: (totalTransferred: number, vaultFileCount: number) => void;
+  /** Called as soon as the local vault manifest is scanned, independent of
+   * whether the full-sync protocol completes. Keeps the "vault 文件总数"
+   * stat meaningful even on incremental reconnects where the peer doesn't
+   * finish the ACK handshake (allComplete never fires). */
+  onVaultScanned?: (vaultFileCount: number) => void;
 }
 
 // ============================================================
@@ -130,7 +135,7 @@ export class InitialSyncManager {
   /** Local file manifest — used by handleFileListAck to find files to transfer. */
   private localManifest: ManifestEntry[] = [];
 
-  /** Total files transferred during this sync session. */
+  /** Total 个文件已传输 during this sync session. */
   private transferredCount = 0;
 
   /** Batch index tracking for multi-batch file list exchange. */
@@ -154,7 +159,7 @@ export class InitialSyncManager {
 
     syncLogger.log(
       LogLevel.INFO,
-      "Starting full initial sync",
+      "正在开始全量初始同步",
       undefined,
       SyncEventType.SYNC_STARTED,
     );
@@ -165,6 +170,12 @@ export class InitialSyncManager {
       this.localManifest = manifest;
       this.progress.total = manifest.length;
       this.progress.completed = 0;
+
+      // Report vault file count as soon as the local manifest is scanned,
+      // independent of whether the full-sync protocol completes (allComplete).
+      // This keeps the "vault 文件总数" stat meaningful even on incremental
+      // reconnects where the peer doesn't finish the ACK handshake.
+      this.options.onVaultScanned?.(this.localManifest.length);
 
       // Save manifest to disk for resume capability
       await this.saveManifest(manifest);
@@ -178,7 +189,7 @@ export class InitialSyncManager {
 
       syncLogger.log(
         LogLevel.SUCCESS,
-        `Full sync started: ${manifest.length} files in manifest`,
+        `全量同步开始: ${manifest.length} 个文件在清单中`,
         undefined,
         SyncEventType.SYNC_STARTED,
       );
@@ -188,7 +199,7 @@ export class InitialSyncManager {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.ERROR,
-        `Full sync error: ${errorMessage}`,
+        `全量同步出错：${errorMessage}`,
         undefined,
         SyncEventType.ERROR,
       );
@@ -210,7 +221,7 @@ export class InitialSyncManager {
     this.cancelled = true;
     syncLogger.log(
       LogLevel.INFO,
-      "Full sync cancelled by user",
+      "全量同步已被用户取消",
       undefined,
       SyncEventType.DISCONNECTED,
     );
@@ -234,7 +245,7 @@ export class InitialSyncManager {
     } catch (err: unknown) {
       syncLogger.log(
         LogLevel.ERROR,
-        `Failed to build manifest: ${err}`,
+        `构建清单失败：${err}`,
         undefined,
         SyncEventType.ERROR,
       );
@@ -407,7 +418,7 @@ export class InitialSyncManager {
   ): Promise<{ missing: ManifestEntry[]; different: ManifestEntry[] }> {
     const payload = msg.payload;
     if (!payload || !payload.files) {
-      debugLog("[ObsSync] handleRemoteBatch: no files in payload");
+      debugLog("[ObsSync] handleRemoteBatch: 负载中无文件");
       return { missing: [], different: [] };
     }
 
@@ -446,7 +457,7 @@ export class InitialSyncManager {
         different.push(remoteEntry);
         syncLogger.log(
           LogLevel.DEBUG,
-          `handleRemoteBatch: hash timeout for "${remoteEntry.relativePath}" — marking different`,
+          `处理远端批次：哈希超时 "${remoteEntry.relativePath}" — 标记为不同`,
           remoteEntry.relativePath,
           SyncEventType.FILE_PUSHED,
         );
@@ -455,7 +466,7 @@ export class InitialSyncManager {
     }
 
     // Send ACK with missing/different lists
-    debugLog("[ObsSync] handleRemoteBatch done batch=" + batchIndex + " missing=" + missing.length + " different=" + different.length);
+    debugLog("[ObsSync] handleRemoteBatch 完成 batch=" + batchIndex + " missing=" + missing.length + " different=" + different.length);
     const ackMsg = createMessage(
       MessageType.FILE_LIST_ACK,
       {
@@ -520,7 +531,7 @@ export class InitialSyncManager {
     if (toTransfer.length === 0) {
       syncLogger.log(
         LogLevel.SUCCESS,
-        "All files are in sync (no files to transfer)",
+        "所有文件已同步（无需传输）",
         undefined,
         SyncEventType.SYNC_COMPLETED,
       );
@@ -543,7 +554,7 @@ export class InitialSyncManager {
     if (!this.cancelled) {
       syncLogger.log(
         LogLevel.SUCCESS,
-        `Full sync completed: ${toTransfer.length} files transferred`,
+        `全量同步完成: ${toTransfer.length} 个文件已传输`,
         undefined,
         SyncEventType.SYNC_COMPLETED,
       );
@@ -647,7 +658,7 @@ export class InitialSyncManager {
       const errorMessage = err instanceof Error ? err.message : String(err);
       syncLogger.log(
         LogLevel.WARN,
-        `Failed to transfer file: ${errorMessage}`,
+        `传输文件失败：${errorMessage}`,
         entry.relativePath,
         SyncEventType.ERROR,
       );
@@ -672,7 +683,7 @@ export class InitialSyncManager {
   }
 
   /**
-   * Get the number of files transferred in the current sync session.
+   * Get the number of 个文件已传输 in the current sync session.
    */
   getTransferredCount(): number {
     return this.transferredCount;

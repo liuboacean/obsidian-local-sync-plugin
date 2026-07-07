@@ -34,6 +34,10 @@ export const DEFAULT_SETTINGS: SyncSettings = {
   enableTls: true,
   allowTlsFallback: true,
   trustedFingerprints: [],
+
+  // Diff Preview Before Sync (v1.2.0)
+  enableDiffPreview: false,
+  diffPreviewWhitelistFolders: [],
 };
 
 // ============================================================

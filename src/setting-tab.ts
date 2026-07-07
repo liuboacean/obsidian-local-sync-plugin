@@ -20,6 +20,8 @@ import {
 import { DEFAULT_SETTINGS } from "./settings";
 import { DEFAULT_PORT, UDP_DISCOVERY_PORT } from "./constants";
 import type ObsidianLocalSyncPlugin from "./main";
+import { SyncHistoryView } from "./sync-history-view";
+import type { DiffPreviewService } from "./diff-preview-service";
 
 // ============================================================
 // Setting Tab Class
@@ -46,6 +48,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
     this.renderSecuritySection(containerEl);
     this.renderTlsSection(containerEl);
     this.renderSyncStatusSection(containerEl);
+    this.renderSyncHistorySection(containerEl);
 
     // Auto-refresh stats every 3 seconds while settings page is open
     this.plugin.registerInterval(
@@ -84,7 +87,7 @@ export class LocalSyncSettingTab extends PluginSettingTab {
         case "待同步文件":
           descEl.textContent = String(stats?.pendingFiles ?? 0);
           break;
-        case "已同步文件":
+        case "本次会话同步文件数":
           descEl.textContent = String(stats?.syncedFiles ?? 0);
           break;
         case "冲突文件":
@@ -379,6 +382,45 @@ export class LocalSyncSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    // --- Diff Preview Before Sync (v1.2.0) ---
+    new Setting(containerEl)
+      .setName("启用差异预览")
+      .setDesc(
+        "在文件变更发送到远端前弹出差异对比预览，确认后再同步（删除操作不触发）。默认关闭。",
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.getSettings().enableDiffPreview ?? false)
+          .onChange(async (value: boolean) => {
+            const settings = this.plugin.getSettings();
+            settings.enableDiffPreview = value;
+            await this.plugin.saveSettings();
+            this.plugin.diffPreviewService?.updateConfig(settings);
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("差异预览白名单文件夹")
+      .setDesc("仅这些文件夹触发预览，逗号分隔；留空表示所有文件夹都触发")
+      .addText((text) =>
+        text
+          .setPlaceholder("notes, projects/research")
+          .setValue(
+            (this.plugin.getSettings().diffPreviewWhitelistFolders ?? []).join(
+              ", ",
+            ),
+          )
+          .onChange(async (value) => {
+            const settings = this.plugin.getSettings();
+            settings.diffPreviewWhitelistFolders = value
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter((s: string) => s.length > 0);
+            await this.plugin.saveSettings();
+            this.plugin.diffPreviewService?.updateConfig(settings);
+          }),
+      );
   }
 
   // ============================================================
@@ -602,8 +644,13 @@ export class LocalSyncSettingTab extends PluginSettingTab {
 
     // Synced files
     new Setting(containerEl)
-      .setName("已同步文件")
+      .setName("本次会话同步文件数")
       .setDesc(String(stats?.syncedFiles ?? 0));
+
+    // Vault file count
+    new Setting(containerEl)
+      .setName("vault 文件总数")
+      .setDesc(String(stats?.vaultFileCount ?? 0));
 
     // Conflicted files
     new Setting(containerEl)
@@ -625,5 +672,25 @@ export class LocalSyncSettingTab extends PluginSettingTab {
           new Notice("同步状态已更新");
         })
       );
+  }
+
+  // ============================================================
+  // 7. Sync History (v1.2.0)
+  // ============================================================
+
+  /**
+   * Render the "同步历史" panel (section 7).
+   * Lazily loads log data only when the settings tab is opened
+   * (display() runs on open), keeping sync performance unaffected.
+   */
+  private renderSyncHistorySection(containerEl: HTMLElement): void {
+    new Setting(containerEl).setName("📜 同步历史").setHeading();
+
+    const viewContainer = containerEl.createDiv({
+      cls: "local-sync-history-container",
+    });
+
+    const view = new SyncHistoryView();
+    void view.render(viewContainer, this.plugin);
   }
 }

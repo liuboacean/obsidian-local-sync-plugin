@@ -29,6 +29,7 @@ export enum MessageType {
   HANDSHAKE_ACK = "HANDSHAKE_ACK",
   FILE_CHANGE = "FILE_CHANGE",
   FILE_CHANGE_ACK = "FILE_CHANGE_ACK",
+  FILE_DELETE = "FILE_DELETE",
   FILE_REQUEST = "FILE_REQUEST",
   FILE_RESPONSE = "FILE_RESPONSE",
   CONFLICT_NOTIFY = "CONFLICT_NOTIFY",
@@ -163,6 +164,7 @@ export interface SyncMessage {
 export interface SyncStats {
   pendingFiles: number;
   syncedFiles: number;
+  vaultFileCount: number;
   conflictedFiles: number;
   failedFiles: number;
   totalBytes: number;
@@ -198,6 +200,10 @@ export interface SyncSettings {
   enableTls?: boolean;
   allowTlsFallback?: boolean;
   trustedFingerprints?: string[];
+
+  // Diff Preview Before Sync (v1.2.0)
+  enableDiffPreview?: boolean;
+  diffPreviewWhitelistFolders?: string[];
 }
 
 export interface DiscoveredDevice {
@@ -253,4 +259,140 @@ export interface CertInfo {
   expiresAt: Date;
   serialNumber: string;
   isExpired: boolean;
+}
+
+// ============================================================
+// Sync History Viewer Types (Feature 1)
+// ============================================================
+
+/**
+ * A single parsed sync-history log entry that is rendered in the
+ * settings-page "同步历史" panel. Extends the on-disk log format with a
+ * derived `icon` (✅/⚠️/⏭/❌/ℹ️) and a UI `expanded` flag.
+ */
+export interface SyncHistoryEntry {
+  /** Self-incrementing unique id (used for expand/select state). */
+  id: number;
+  /** Unix epoch milliseconds. */
+  timestamp: number;
+  level: LogLevel;
+  message: string;
+  filePath?: string;
+  eventType: SyncEventType;
+  /** Derived glyph: ✅ / ⚠️ / ⏭ / ❌ (or ℹ️ fallback). */
+  icon: string;
+  /** Front-end state: whether the detail row is expanded. */
+  expanded: boolean;
+}
+
+/**
+ * Filter criteria applied to the loaded sync-history entries.
+ */
+export interface SyncHistoryFilters {
+  /** Substring match against filePath (case-insensitive). */
+  filePathFilter?: string;
+  /** Start of time range (Unix ms, inclusive). */
+  fromTimestamp?: number;
+  /** End of time range (Unix ms, inclusive). */
+  toTimestamp?: number;
+  /** Restrict to specific log levels. */
+  levels?: LogLevel[];
+  /** Restrict to specific event types. */
+  eventTypes?: SyncEventType[];
+}
+
+/**
+ * Aggregated statistics for the sync-history panel header card.
+ */
+export interface SyncHistoryStats {
+  totalEntries: number;
+  /** Count of ✅ entries. */
+  successCount: number;
+  /** Count of ⚠️ entries. */
+  warnCount: number;
+  /** Count of ⏭ entries. */
+  skipCount: number;
+  /** Count of ❌ entries. */
+  errorCount: number;
+  /** Count of FILE_PUSHED events. */
+  filePushCount: number;
+  /** Count of FILE_RECEIVED events. */
+  fileReceiveCount: number;
+  /** Count of CONFLICT_DETECTED events. */
+  conflictCount: number;
+}
+
+// ============================================================
+// Diff Preview Before Sync Types (Feature 2)
+// ============================================================
+
+/**
+ * User decision produced by the Diff Preview modal.
+ */
+export enum DiffPreviewAction {
+  CONFIRM = "CONFIRM",
+  SKIP = "SKIP",
+  CONFIRM_ALL = "CONFIRM_ALL",
+}
+
+/**
+ * Configuration snapshot for the Diff Preview feature.
+ * (Mirror of the relevant SyncSettings fields; kept as a standalone
+ * interface so the service does not depend on the whole SyncSettings shape.)
+ */
+export interface DiffPreviewSettings {
+  enabled: boolean;
+  /** Folders that trigger the preview. Empty array = all folders. */
+  whitelistFolders: string[];
+  /** Auto-confirm timeout in milliseconds (default 30000). */
+  timeoutMs: number;
+}
+
+/**
+ * Binary file metadata used for non-text (meta-only) comparison.
+ */
+export interface BinaryMeta {
+  size: number;
+  hash: string;
+  mtime: number;
+}
+
+/**
+ * A single pending diff-preview request awaiting a user decision.
+ * `resolve`/`reject` are supplied by DiffPreviewService and must be
+ * invoked exactly once when the request is settled.
+ */
+export interface DiffPreviewRequest {
+  requestId: string;
+  change: FileChange;
+  /** TEXT file: previous (baseline) content for the diff. */
+  currentContent?: string;
+  /** TEXT file: new content about to be sent. */
+  newContent?: string;
+  /** BINARY file: previous (baseline) metadata. */
+  currentMeta?: BinaryMeta;
+  /** BINARY file: new metadata about to be sent. */
+  newMeta?: BinaryMeta;
+  createdAt: Date;
+  resolve: (result: DiffPreviewResult) => void;
+  reject: (error: Error) => void;
+}
+
+/**
+ * The result of a settled diff-preview request.
+ */
+export interface DiffPreviewResult {
+  requestId: string;
+  action: DiffPreviewAction;
+  /** P2: partial content when only specific lines are selected. */
+  selectedContent?: string;
+}
+
+/**
+ * A hook invoked by SyncEngine before a local change is transmitted.
+ * Returning `true` allows the send; returning `false` skips it.
+ */
+export interface BeforeSendHook {
+  name: string;
+  handler: (change: FileChange, vaultPath: string) => Promise<boolean>;
 }

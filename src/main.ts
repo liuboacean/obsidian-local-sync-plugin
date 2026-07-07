@@ -28,6 +28,7 @@ import { CrdtEngine } from "./crdt-engine";
 import { ConflictDetector } from "./conflict-detector";
 import { SyncEngine } from "./sync-engine";
 import { ConnectionManager } from "./connection-manager";
+import { DiffPreviewService } from "./diff-preview-service";
 import { DiscoveryManager } from "./discovery-manager";
 import { InitialSyncManager } from "./initial-sync";
 import { syncLogger, debugLog } from "./sync-logger";
@@ -57,6 +58,8 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   settingTab: LocalSyncSettingTab | null = null;
   osWriter!: OsWriter;
   certManager!: CertManager;
+  /** Diff Preview Before Sync service (v1.2.0). */
+  diffPreviewService!: DiffPreviewService;
 
   /** Generated unique device ID (persistent per vault). */
   private deviceId: string = "";
@@ -68,10 +71,10 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   async onload(): Promise<void> {
     // Initialize log directory so all log entries are persisted to file
     await syncLogger.initLogDir();
-    debugLog("[Obsidian Local Sync] loading plugin...");
+    debugLog("[Obsidian Local Sync] 正在加载插件…");
 
     await this.loadSettings();
-    debugLog("[Obsidian Local Sync] settings loaded, deviceId: " + this.settings.deviceId);
+    debugLog("[Obsidian Local Sync] 设置已加载，deviceId: " + this.settings.deviceId);
 
     // Initialize device ID (persisted in settings)
     this.deviceId = this.settings.deviceId || generateDeviceId();
@@ -87,7 +90,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     // Initialize components
     try {
       await this.initComponents(vaultPath);
-      debugLog("[Obsidian Local Sync] components initialized");
+      debugLog("[Obsidian Local Sync] 组件已初始化");
     } catch (err: unknown) {
       console.error("[Obsidian Local Sync] initComponents FAILED:", err);
     }
@@ -95,7 +98,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     // Bind component events
     try {
       this.bindEvents();
-      debugLog("[Obsidian Local Sync] events bound");
+      debugLog("[Obsidian Local Sync] 事件已绑定");
     } catch (err: unknown) {
       console.error("[Obsidian Local Sync] bindEvents FAILED:", err);
     }
@@ -103,7 +106,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     // Start file watcher
     try {
       this.watcher.start(vaultPath, this.settings.ignoreFolders, this.settings.ignoreExtensions);
-      debugLog("[Obsidian Local Sync] file watcher started");
+      debugLog("[Obsidian Local Sync] 文件监视器已启动");
     } catch (err: unknown) {
       console.error("[Obsidian Local Sync] file watcher FAILED:", err);
     }
@@ -112,7 +115,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     if (this.settings.enableUdpDiscovery) {
       try {
         this.startDiscovery();
-        debugLog("[Obsidian Local Sync] UDP discovery started");
+        debugLog("[Obsidian Local Sync] UDP 发现已启动");
       } catch (err: unknown) {
         console.error("[Obsidian Local Sync] UDP discovery FAILED:", err);
       }
@@ -121,16 +124,16 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     // Auto-start the WebSocket server on plugin load
     // This allows other devices to connect to this instance
     this.connMgr.startServer()
-      .then(() => debugLog("[Obsidian Local Sync] WebSocket server started on port", this.settings.port))
+      .then(() => debugLog("[Obsidian Local Sync] WebSocket 服务端已在端口", this.settings.port))
       .catch((err) => {
         console.error("[Obsidian Local Sync] Server start FAILED:", err);
-        syncLogger.log(LogLevel.ERROR, `Auto-start server failed: ${err}`, undefined, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `自动启动服务端失败：${err}`, undefined, SyncEventType.ERROR);
       });
 
     // Auto-connect to remote device if target address is configured
     // Saves the user from having to click "连接" after each restart
     if (this.settings.targetAddress && (this.settings.mode === SyncMode.CLIENT || this.settings.mode === SyncMode.DUPLEX)) {
-      debugLog("[Obsidian Local Sync] Auto-connecting to", this.settings.targetAddress);
+      debugLog("[Obsidian Local Sync] 正在自动连接到", this.settings.targetAddress);
       this.startSync().catch((err) => {
         console.error("[Obsidian Local Sync] Auto-connect failed:", err);
       });
@@ -142,17 +145,17 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
 
     // Register status bar
     this.statusBar.registerStatusBar();
-    debugLog("[Obsidian Local Sync] settings tab + status bar registered");
+    debugLog("[Obsidian Local Sync] 设置标签页与状态栏已注册");
 
     // Register commands
     this.registerCommands();
-    debugLog("[Obsidian Local Sync] commands registered");
+    debugLog("[Obsidian Local Sync] 命令已注册");
 
-    debugLog("[Obsidian Local Sync] plugin load COMPLETE. Device ID:", this.deviceId);
+    debugLog("[Obsidian Local Sync] 插件加载完成。设备 ID:", this.deviceId);
 
     syncLogger.log(
       LogLevel.SUCCESS,
-      "Plugin loaded successfully. Device ID: " + this.deviceId,
+      "插件加载成功。设备 ID：" + this.deviceId,
       undefined,
       SyncEventType.SYNC_STARTED,
     );
@@ -163,7 +166,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
   // ============================================================
 
   onunload(): void {
-    debugLog("Obsidian Local Sync: unloading plugin");
+    debugLog("[Obsidian Local Sync] 正在卸载插件");
 
     // Stop file watcher
     this.watcher?.stop();
@@ -187,7 +190,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
 
     syncLogger.log(
       LogLevel.INFO,
-      "Plugin unloaded",
+      "插件已卸载",
       undefined,
       SyncEventType.DISCONNECTED,
     );
@@ -211,7 +214,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       } catch (err: unknown) {
         syncLogger.log(
           LogLevel.WARN,
-          `TLS init failed, using plain WS: ${err}`,
+          `TLS 初始化失败，回退到明文 WS：${err}`,
           undefined,
           SyncEventType.ERROR,
         );
@@ -258,7 +261,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     // CRDT Engine
     this.crdtEngine = new CrdtEngine();
     this.crdtEngine.init().catch((err) => {
-      syncLogger.log(LogLevel.ERROR, `CRDT init error: ${err}`, undefined, SyncEventType.ERROR);
+      syncLogger.log(LogLevel.ERROR, `CRDT 初始化出错：${err}`, undefined, SyncEventType.ERROR);
     });
 
     // Conflict Detector
@@ -272,6 +275,12 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       this.conflictDetector,
     );
     this.engine.init(this.deviceId, this.settings.deviceName, vaultPath);
+
+    // Diff Preview Before Sync (v1.2.0): register the before-send hook so
+    // the engine asks for confirmation before transmitting local changes.
+    this.diffPreviewService = new DiffPreviewService(this.app);
+    this.diffPreviewService.updateConfig(this.settings);
+    this.engine.setBeforeSendHook(this.diffPreviewService.createHook());
 
     // Connection Manager
     this.connMgr = new ConnectionManager({
@@ -311,6 +320,12 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       onProgress: (progress) => {
         this.statusBar?.setSyncProgress(progress.completed, progress.total);
       },
+      // Populate vault file count as soon as the local vault is scanned,
+      // so it is available immediately after connecting (within milliseconds)
+      // and does not depend on the full-sync protocol reaching allComplete.
+      onVaultScanned: (count: number) => {
+        this.engine.setVaultFileCount(count);
+      },
       onFullSyncComplete: (count, vaultFileCount) => {
         this.engine.setInitialSyncCount(count);
         this.engine.setVaultFileCount(vaultFileCount);
@@ -322,7 +337,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
         this.engine.setLastSyncTime(timeStr);
         syncLogger.log(
           LogLevel.SUCCESS,
-          `Initial sync completed: ${count} files transferred, vault has ${vaultFileCount} files`,
+          `初始同步已完成：${count} 个文件已传输, vault has ${vaultFileCount} files`,
           undefined,
           SyncEventType.SYNC_COMPLETED,
         );
@@ -342,19 +357,19 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     // File watcher -> Sync engine
     this.watcher.on("file-created", (change: FileChange) => {
       this.engine.handleLocalChange(change).catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `file-created handler: ${err}`, change.relativePath, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `文件创建处理器出错：${err}`, change.relativePath, SyncEventType.ERROR);
       });
     });
 
     this.watcher.on("file-modified", (change: FileChange) => {
       this.engine.handleLocalChange(change).catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `file-modified handler: ${err}`, change.relativePath, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `文件修改处理器出错：${err}`, change.relativePath, SyncEventType.ERROR);
       });
     });
 
     this.watcher.on("file-deleted", (change: FileChange) => {
       this.engine.handleLocalChange(change).catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `file-deleted handler: ${err}`, change.relativePath, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `文件删除处理器出错：${err}`, change.relativePath, SyncEventType.ERROR);
       });
     });
 
@@ -365,14 +380,14 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       // UDP discovery may not work across subnets, so this ensures
       // the status bar shows connected device count even without UDP
       this.statusBar.setDeviceCount(1);
-      syncLogger.log(LogLevel.SUCCESS, "Connected to remote device", undefined, SyncEventType.CONNECTED);
+      syncLogger.log(LogLevel.SUCCESS, "已连接到远程设备", undefined, SyncEventType.CONNECTED);
 
       // Start sync engine
       this.engine.start();
 
-      // Flush any pending changes
+      // Flush any 待发变更
       this.engine.flushPendingQueue().catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `flushPendingQueue error: ${err}`, undefined, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `刷新待发队列出错：${err}`, undefined, SyncEventType.ERROR);
       });
 
       // Request full sync on first connection
@@ -380,44 +395,44 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
         .then(() => {
           syncLogger.log(
             LogLevel.SUCCESS,
-            "Manifest sent, waiting for remote peer to request files...",
+            "清单已发送，等待远端节点请求文件……",
             undefined,
             SyncEventType.SYNC_STARTED,
           );
         })
         .catch((err) => {
-          syncLogger.log(LogLevel.ERROR, `initialSync error: ${err}`, undefined, SyncEventType.ERROR);
+          syncLogger.log(LogLevel.ERROR, `初始同步出错：${err}`, undefined, SyncEventType.ERROR);
         });
     });
 
     this.connMgr.on("disconnected", () => {
       this.statusBar.updateConnectionStatus("disconnected");
       this.statusBar.setSyncing(false);
-      syncLogger.log(LogLevel.WARN, "Disconnected from remote device", undefined, SyncEventType.DISCONNECTED);
+      syncLogger.log(LogLevel.WARN, "已断开与远程设备的连接", undefined, SyncEventType.DISCONNECTED);
     });
 
     this.connMgr.on("reconnecting", (info: { delay: number; attempt: number }) => {
       this.statusBar.updateConnectionStatus("connecting");
-      syncLogger.log(LogLevel.INFO, `Reconnecting in ${info.delay}ms (attempt ${info.attempt})`);
+      syncLogger.log(LogLevel.INFO, `将在 ${info.delay} 毫秒后重连（第 ${info.attempt})`);
     });
 
     this.connMgr.on("message-received", (msg: SyncMessage) => {
       // Route initial sync messages to InitialSyncManager
       if (msg.type === MessageType.FILE_LIST_BATCH) {
         this.initialSync.handleRemoteBatch(msg).catch((err) => {
-          syncLogger.log(LogLevel.ERROR, `initialSync batch error: ${err}`, undefined, SyncEventType.ERROR);
+          syncLogger.log(LogLevel.ERROR, `初始同步批次出错：${err}`, undefined, SyncEventType.ERROR);
         });
         return;
       }
       if (msg.type === MessageType.FILE_LIST_ACK) {
         this.initialSync.handleFileListAck(msg).catch((err) => {
-          syncLogger.log(LogLevel.ERROR, `initialSync ack error: ${err}`, undefined, SyncEventType.ERROR);
+          syncLogger.log(LogLevel.ERROR, `初始同步确认出错：${err}`, undefined, SyncEventType.ERROR);
         });
         return;
       }
       // All other messages go to the sync engine
       this.engine.handleRemoteMessage(msg).catch((err) => {
-        syncLogger.log(LogLevel.ERROR, `message-received handler: ${err}`, undefined, SyncEventType.ERROR);
+        syncLogger.log(LogLevel.ERROR, `消息接收处理器出错：${err}`, undefined, SyncEventType.ERROR);
       });
     });
 
@@ -425,7 +440,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     this.connMgr.on("crdt-update-received", (data: unknown) => {
       // Binary CRDT updates are handled through the message-received path for text,
       // and direct binary for binary frames
-      syncLogger.log(LogLevel.DEBUG, "CRDT binary update received");
+      syncLogger.log(LogLevel.DEBUG, "已接收 CRDT 二进制更新");
     });
 
     // Sync engine -> Status bar
@@ -457,16 +472,16 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
     // TLS Events
     this.connMgr.on(EVENTS.TLS_FALLBACK, () => {
       this.statusBar.updateConnectionStatus("warning");
-      syncLogger.log(LogLevel.WARN, "TLS connection failed, fallback to plain WS", undefined, SyncEventType.ERROR);
+      syncLogger.log(LogLevel.WARN, "TLS 连接失败，回退到明文 WS", undefined, SyncEventType.ERROR);
     });
 
     this.connMgr.on(EVENTS.TLS_ERROR, () => {
       this.statusBar.updateConnectionStatus("disconnected");
-      syncLogger.log(LogLevel.ERROR, "TLS connection failed, no fallback", undefined, SyncEventType.ERROR);
+      syncLogger.log(LogLevel.ERROR, "TLS 连接失败，无回退", undefined, SyncEventType.ERROR);
     });
 
     this.connMgr.on(EVENTS.CERT_RESET, () => {
-      syncLogger.log(LogLevel.INFO, "Certificate reset", undefined, SyncEventType.INFO);
+      syncLogger.log(LogLevel.INFO, "证书已重置", undefined, SyncEventType.INFO);
     });
   }
 
@@ -565,7 +580,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       .then((resolution: ConflictResolution) => {
         syncLogger.log(
           LogLevel.INFO,
-          `Conflict resolved: ${conflictInfo.relativePath} → ${resolution}`,
+          `冲突已解决：${conflictInfo.relativePath} → ${resolution}`,
           conflictInfo.relativePath,
           SyncEventType.CONFLICT_RESOLVED,
         );
@@ -574,7 +589,7 @@ export default class ObsidianLocalSyncPlugin extends Plugin {
       .catch((err) => {
         syncLogger.log(
           LogLevel.ERROR,
-          `Conflict resolution error: ${err}`,
+          `冲突解决出错：${err}`,
           conflictInfo.relativePath,
           SyncEventType.ERROR,
         );

@@ -22,6 +22,16 @@ export const UDP_DEVICE_TIMEOUT_MS = 30000;
 export const CRDT_SNAPSHOT_INTERVAL_MS = 300000; // 5min dirty-flag check
 
 // ============================================================
+// Sync History & Diff Preview Constants
+// ============================================================
+
+/** Number of sync-history rows rendered per page. */
+export const SYNC_HISTORY_PAGE_SIZE = 50;
+
+/** Auto-confirm timeout (ms) for the Diff Preview modal. */
+export const DIFF_PREVIEW_TIMEOUT_MS = 30000;
+
+// ============================================================
 // TLS Certificate Constants
 // ============================================================
 
