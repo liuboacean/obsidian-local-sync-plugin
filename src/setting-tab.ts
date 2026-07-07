@@ -21,7 +21,6 @@ import { DEFAULT_SETTINGS } from "./settings";
 import { DEFAULT_PORT, UDP_DISCOVERY_PORT } from "./constants";
 import type ObsidianLocalSyncPlugin from "./main";
 import { SyncHistoryView } from "./sync-history-view";
-import type { DiffPreviewService } from "./diff-preview-service";
 
 // ============================================================
 // Setting Tab Class

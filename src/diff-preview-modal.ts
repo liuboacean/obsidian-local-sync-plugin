@@ -12,9 +12,7 @@ import { Modal } from "obsidian";
 import { diffLines, type Change } from "diff";
 import {
   DiffPreviewRequest,
-  DiffPreviewResult,
   DiffPreviewAction,
-  BinaryMeta,
 } from "./types";
 import { DIFF_PREVIEW_TIMEOUT_MS } from "./constants";
 import { formatTime } from "./utils";
