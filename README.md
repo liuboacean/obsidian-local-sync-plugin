@@ -314,7 +314,6 @@ cp main.js manifest.json styles.css /path/to/vault-b/.obsidian/plugins/local-syn
 - [x] UDP auto‑discovery
 - [x] Cross‑platform file writer
 - [x] **TLS encryption (WSS)** ← v1.1.0
-- [ ] Mobile client support (P2)
 - [x] Sync history viewer (P2)
 - [x] Diff preview before sync (P2)
 
